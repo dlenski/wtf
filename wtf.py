@@ -56,11 +56,15 @@ def multi_opt(p, *args, **kw):
 
 # Parse arguments
 p = argparse.ArgumentParser(description='''
-    Whitespace Total Fixer. Removes all manner of annoying whitespace errors from text files.
+    Whitespace Total Fixer. Fixes and/or reports all manner of
+    annoying issues with whitespace or line endings in text files.
+
     Exit codes on successful operation:
-        0: no errors seen
-        10: errors fixed
-        20: unfixed errors seen''')
+        0: no issues seen
+        10: issues fixed
+        20: unfixed issues seen
+
+    http://github.com/dlenski/wtf''')
 g=p.add_argument_group("Input/output modes")
 g.add_argument('inf', metavar="textfile", nargs='*', type=argparse.FileType('rb'), help='Input file(s)', default=[stdin])
 g.add_argument('-o', metavar="outfile", dest='outf', type=argparse.FileType('w'), help='Output file (default is stdout)', default=stdout)

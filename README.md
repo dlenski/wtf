@@ -6,7 +6,7 @@ text files, so that they don't clog up your commits to version control
 systems like Git, Mercurial, or Subversion.
 
 How to use it (see below for options to control exactly which
-whitespace errors it fixes):
+whitespace issues it fixes):
 
      # consistent whitespace from programs that generate text files
      text_file_generator | wtf.py -o clean_output.txt
@@ -18,9 +18,9 @@ whitespace errors it fixes):
      # exit status
      wtf.py file1.txt file2.txt file3.txt > /dev/null
      if (( $? == 10 )); then
-     	echo "errors fixed"
+       echo "issues fixed"
      elif (( $? == 20 )); then
-        echo "unfixed errors!"
+       echo "unfixed issues!"
      fi
 
 Why should you use it:
@@ -44,8 +44,8 @@ Whitespace issues addressed
 ---------------------------
 
 WTF current fixes or detects a few common types of whitespace
-errors. Most of these options have three possible values enabling the
-user to fix, report, or ignore the corresponding whitespace error.
+issues. Most of these options have three possible values enabling the
+user to fix, report, or ignore the corresponding whitespace issue.
 
 Remove trailing spaces at the ends of lines (default is **fix**):
 
@@ -87,8 +87,8 @@ Reporting
 ---------
 
 With the `-v` option, WTF will summarize each file processed, if
-errors were found and/or fixed. With `-vv` it will also report
-error-free files.
+issues were found and/or fixed. With `-vv` it will also report
+issue-free files.
 
     nightmare.txt:
     	CHOPPED 1 lines with trailing space
@@ -99,9 +99,9 @@ error-free files.
 
 WTF will return the following return codes on successfull operation:
 
-* 0: no errors seen (or `-X`/`--no-exit-codes` specified)
-* 10: errors fixed
-* 20: unfixed errors seen
+* 0: no issues seen (or `-X`/`--no-exit-codes` specified)
+* 10: issues fixed
+* 20: unfixed issues seen
 
 Todo
 ----
