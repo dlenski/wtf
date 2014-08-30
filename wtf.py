@@ -85,7 +85,7 @@ g.add_argument('-E', '--coerce-eol', action='store', metavar='ENDING', choices=(
                help='Coerce line endings to a specific type: crlf, lf, or native (default %(default)s)');
 
 g=p.add_argument_group("Tabs")
-multi_opt(g, '-s', '--tab-space-mix', default='warn', help='Warn if spaces followed by tabs in whitespace at beginning of line (default %(default)s)',
+multi_opt(g, '-s', '--tab-space-mix', default='report', help='Warn if spaces followed by tabs in whitespace at beginning of line (default %(default)s)',
           values=('report','ignore'), longs=('','ignore-'),shorts=('','I'))
 
 p.add_argument('-v', '--verbose', action='count', default=0, help="Increasing verbosity")
