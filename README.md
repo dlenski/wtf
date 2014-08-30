@@ -5,7 +5,7 @@ Identifies and/or fixes inconsistent whitespace and line endings in
 text files, so that they don't clog up your commits to version control
 systems like Git, Mercurial, or Subversion.
 
-How to use it (see below for options to control exactly which
+How to use it ([see below](#options) for options to control exactly which
 whitespace issues it fixes):
 
      # consistent whitespace from programs that generate text files
@@ -18,7 +18,7 @@ whitespace issues it fixes):
      # exit status
      wtf.py file1.txt file2.txt file3.txt > /dev/null
      if (( $? == 10 )); then
-     	echo "isses fixed"
+        echo "isses fixed"
      elif (( $? == 20 )); then
         echo "unfixed issues!"
      fi
@@ -40,8 +40,8 @@ laden with whitespace tools generate from various recalcitrant editing
 tools on multiple platforms. That evening, I went home and spent way
 too much time writing this program.
 
-Whitespace issues addressed
----------------------------
+<a name="options"/>Whitespace issues addressed
+----------------------------------------------
 
 WTF current fixes or detects a few common types of whitespace
 issues. Most of these options have three possible values enabling the
@@ -91,11 +91,11 @@ issues were found and/or fixed. With `-vv` it will also report
 issue-free files.
 
     nightmare.txt:
-    	CHOPPED 1 lines with trailing space
-    	CHOPPED 0 blank lines at EOF
-    	ADDED newline at EOF
-    	CHANGED 1 line endings which didn't match crlf from first line
-    	WARNED ABOUT 1 lines with tabs/spaces mix
+        CHOPPED 1 lines with trailing space
+        CHOPPED 0 blank lines at EOF
+        ADDED newline at EOF
+        CHANGED 1 line endings which didn't match crlf from first line
+        WARNED ABOUT 1 lines with tabs/spaces mix
 
 WTF will return the following return codes on successfull operation:
 
