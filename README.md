@@ -18,9 +18,9 @@ whitespace issues it fixes):
      # exit status
      wtf.py file1.txt file2.txt file3.txt > /dev/null
      if (( $? == 10 )); then
-       echo "issues fixed"
+     	echo "isses fixed"
      elif (( $? == 20 )); then
-       echo "unfixed issues!"
+        echo "unfixed issues!"
      fi
 
 Why should you use it:
