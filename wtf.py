@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+from __future__ import print_function
 import argparse
 from sys import stdin, stdout, stderr, exit
 import re
@@ -150,14 +151,14 @@ for inf in args.inf:
             linesep = {'\r\n':'crlf','\n':'lf'}.get(eol, repr(eol))
 
         if args.verbose>=4:
-            print>>stderr, "%s %sLINE %d: %s" % (fname, 'EMPTY ' if empty else '', ii+1, repr(m.groups()))
+            print("%s %sLINE %d: %s" % (fname, 'EMPTY ' if empty else '', ii+1, repr(m.groups())), file=stderr)
 
         # Warn about tab/space mix
         if actions.tab_space_mix:
             if ' \t' in ispace:
                 seen.tab_space_mix += 1
                 if actions.tab_space_mix=='report':
-                    print>>stderr, "%s %sLINE %d: WARNING: spaces followed by tabs in whitespace at beginning of line" % (fname, 'EMPTY ' if empty else '', ii+1)
+                    print("%s %sLINE %d: WARNING: spaces followed by tabs in whitespace at beginning of line" % (fname, 'EMPTY ' if empty else '', ii+1), file=stderr)
 
         # Fix trailing space
         if actions.trail_space:
@@ -182,7 +183,7 @@ for inf in args.inf:
                     else:
                         eol = os.linesep
                         linesep = {'\r\n':'crlf','\n':'lf'}.get(eol, repr(eol))
-                        print>>stderr, "%s %sLINE %d: WARNING: don't know what line ending to add (guessed %s)" % (fname, 'EMPTY ' if empty else '', ii+1, linesep)
+                        print("%s %sLINE %d: WARNING: don't know what line ending to add (guessed %s)" % (fname, 'EMPTY ' if empty else '', ii+1, linesep), file=stderr)
         else:
             # there is a line ending...
             if eol!=first_eol:
@@ -203,7 +204,7 @@ for inf in args.inf:
         # Put the line back together
         outline = ispace+body+trail+eol
         if args.verbose>=3 and outline!=line:
-            print>>stderr, "%s %sLINE %d: changing %s to %s" % (fname, 'EMPTY ' if empty else '', ii+1, repr(line), repr(outline))
+            print("%s %sLINE %d: changing %s to %s" % (fname, 'EMPTY ' if empty else '', ii+1, repr(line), repr(outline)), file=stderr)
 
         # empty line, could be at end of file
         if empty:
@@ -234,19 +235,19 @@ for inf in args.inf:
     all_fixed += sum( fixed[k] for k in actions )
     if args.verbose>=1:
         if problems_seen>0 or args.verbose>=2:
-            print>>stderr, "%s:" % fname
+            print("%s:" % fname, file=stderr)
             if actions.trail_space:
-                print>>stderr, "\t%s %d lines with trailing space" % ('CHOPPED' if actions.trail_space=='fix' else 'SAW', seen.trail_space)
+                print("\t%s %d lines with trailing space" % ('CHOPPED' if actions.trail_space=='fix' else 'SAW', seen.trail_space), file=stderr)
             if actions.eof_blanks:
-                print>>stderr, "\t%s %d blank lines at EOF" % ('CHOPPED' if actions.eof_blanks=='fix' else 'SAW', seen.eof_blanks)
+                print("\t%s %d blank lines at EOF" % ('CHOPPED' if actions.eof_blanks=='fix' else 'SAW', seen.eof_blanks), file=stderr)
             if actions.eof_newl:
-                print>>stderr, "\t%s newline at EOF" % ('ADDED' if actions.eof_newl=='fix' and fixed.eof_newl else 'SAW MISSING' if seen.eof_newl else 'no change to')
+                print("\t%s newline at EOF" % ('ADDED' if actions.eof_newl=='fix' and fixed.eof_newl else 'SAW MISSING' if seen.eof_newl else 'no change to'), file=stderr)
             if actions.match_eol:
-                print>>stderr, "\t%s %d line endings which didn't match %s from first line" % ('CHANGED' if actions.match_eol=='fix' else 'SAW', seen.match_eol, linesep)
+                print("\t%s %d line endings which didn't match %s from first line" % ('CHANGED' if actions.match_eol=='fix' else 'SAW', seen.match_eol, linesep), file=stderr)
             if coerce_eol:
-                print>>stderr, "\tCOERCED %d line endings to %s" % (seen.coerce_eol, actions.coerce_eol)
+                print("\tCOERCED %d line endings to %s" % (seen.coerce_eol, actions.coerce_eol), file=stderr)
             if actions.tab_space_mix:
-                print>>stderr, "\tWARNED ABOUT %d lines with tabs/spaces mix" % seen.tab_space_mix
+                print("\tWARNED ABOUT %d lines with tabs/spaces mix" % seen.tab_space_mix, file=stderr)
 
     if args.inplace:
         outf.close()
