@@ -20,6 +20,7 @@ class slurpy(dict):
     def __setattr__(self, k, v):
         self[k]=v
 
+# Add several related options at once (e.g. --something, --no-something, --ignore-something)
 def multi_opt(p, *args, **kw):
     values = kw.pop('values', ('fix','report',None))
     longs = kw.pop('longs', ('','report-','ignore-'))
@@ -60,51 +61,56 @@ def multi_opt(p, *args, **kw):
     return g
 
 # Parse arguments
-p = argparse.ArgumentParser(description='''
-    Whitespace Total Fixer. Fixes and/or reports all manner of
-    annoying issues with whitespace or line endings in text files.
+def parse_args():
+    p = argparse.ArgumentParser(description='''
+        Whitespace Total Fixer. Fixes and/or reports all manner of
+        annoying issues with whitespace or line endings in text files.
 
-    Exit codes on successful operation:
-        0: no issues seen
-        10: issues fixed
-        20: unfixed issues seen
+        Exit codes on successful operation:
+            0: no issues seen
+            10: issues fixed
+            20: unfixed issues seen
 
-    http://github.com/dlenski/wtf''')
-g=p.add_argument_group("Input/output modes")
-g.add_argument('inf', metavar="textfile", nargs='*', type=argparse.FileType('rb'), help='Input file(s)', default=[stdin])
-g.add_argument('-o', metavar="outfile", dest='outf', type=argparse.FileType('w'), help='Output file (default is stdout)', default=stdout)
-g2=g.add_mutually_exclusive_group(required=False)
-g2.add_argument('-i', dest='inplace', action='store_const', const=True, help='In-place editing; allows multiple input files')
-g2.add_argument('-I', dest='inplace', metavar='.EXT', help='Same, but makes backups with specified extension')
+        http://github.com/dlenski/wtf''')
+    g=p.add_argument_group("Input/output modes")
+    g.add_argument('inf', metavar="textfile", nargs='*', type=argparse.FileType('rb'), help='Input file(s)', default=[stdin])
+    g.add_argument('-o', metavar="outfile", dest='outf', type=argparse.FileType('w'), help='Output file (default is stdout)', default=stdout)
+    g2=g.add_mutually_exclusive_group(required=False)
+    g2.add_argument('-i', dest='inplace', action='store_const', const=True, help='In-place editing; allows multiple input files')
+    g2.add_argument('-I', dest='inplace', metavar='.EXT', help='Same, but makes backups with specified extension')
 
-g=p.add_argument_group("Trailing space")
-multi_opt(g, '-t', '--trail-space', default='fix', help='Remove space at end-of-line (default %(default)s)')
+    g=p.add_argument_group("Trailing space")
+    multi_opt(g, '-t', '--trail-space', default='fix', help='Remove space at end-of-line (default %(default)s)')
 
-g=p.add_argument_group("End of file")
-multi_opt(g, '-b', '--eof-blanks', default='fix', help='Remove blank lines at end-of-file (default %(default)s)')
-multi_opt(g, '-n', '--eof-newl', default='fix', help='Ensure newline appears at end-of-file (default %(default)s)')
+    g=p.add_argument_group("End of file")
+    multi_opt(g, '-b', '--eof-blanks', default='fix', help='Remove blank lines at end-of-file (default %(default)s)')
+    multi_opt(g, '-n', '--eof-newl', default='fix', help='Ensure newline appears at end-of-file (default %(default)s)')
 
-g=p.add_argument_group("End of line characters")
-multi_opt(g, '-m', '--match-eol', default='fix', help='Make sure all lines match the first line (default %(default)s)')
-g.add_argument('-E', '--coerce-eol', action='store', metavar='ENDING', choices=('crlf','lf','native','none'), default='none',
-               help='Coerce line endings to a specific type: crlf, lf, or native (default %(default)s)');
+    g=p.add_argument_group("End of line characters")
+    multi_opt(g, '-m', '--match-eol', default='fix', help='Make sure all lines match the first line (default %(default)s)')
+    g.add_argument('-E', '--coerce-eol', action='store', metavar='ENDING', choices=('crlf','lf','native','none'), default='none',
+                   help='Coerce line endings to a specific type: crlf, lf, or native (default %(default)s)');
 
-g=p.add_argument_group("Tabs")
-multi_opt(g, '-s', '--tab-space-mix', default='report', help='Warn if spaces followed by tabs in whitespace at beginning of line (default %(default)s)',
-          values=('report','ignore'), longs=('','ignore-'),shorts=('','I'))
+    g=p.add_argument_group("Tabs")
+    multi_opt(g, '-s', '--tab-space-mix', default='report', help='Warn if spaces followed by tabs in whitespace at beginning of line (default %(default)s)',
+              values=('report','ignore'), longs=('','ignore-'),shorts=('','I'))
 
-p.add_argument('-v', '--verbose', action='count', default=0, help="Increasing verbosity")
-p.add_argument('-X', '--no-exit-codes', action='store_true', help="Always return 0 on success")
-args = p.parse_args()
+    p.add_argument('-v', '--verbose', action='count', default=0, help="Increasing verbosity")
+    p.add_argument('-X', '--no-exit-codes', action='store_true', help="Always return 0 on success")
+    args = p.parse_args()
 
-# Check for things that don't make sense
-if args.inplace is not None and stdin in args.inf:
-    p.error("cannot use stdin for in-place editing (-i/-I); must specify filenames")
-elif args.outf!=stdout:
-    if args.inplace is not None:
-        p.error("cannot specify both in-place editing (-i/-I) and output file (-o)")
-    elif len(args.inf)>1:
-        p.error("cannot specify multiple input files with a single output file (-o)")
+    # Check for things that don't make sense
+    if args.inplace is not None and stdin in args.inf:
+        p.error("cannot use stdin for in-place editing (-i/-I); must specify filenames")
+    elif args.outf!=stdout:
+        if args.inplace is not None:
+            p.error("cannot specify both in-place editing (-i/-I) and output file (-o)")
+        elif len(args.inf)>1:
+            p.error("cannot specify multiple input files with a single output file (-o)")
+
+    return p, args
+
+p, args = parse_args()
 
 # Actions that we're going to do
 actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','match_eol','coerce_eol','tab_space_mix'))
