@@ -10,11 +10,15 @@ try:
 except ImportError:
     import StringIO
 
+# Quacks like a dict and an object
 class slurpy(dict):
-	def __getattr__(self, k):
-		return self[k]
-	def __setattr__(self, k, v):
-		self[k]=v
+    def __getattr__(self, k):
+        try:
+            return self[k]
+        except KeyError as e:
+            raise AttributeError(*e.args)
+    def __setattr__(self, k, v):
+        self[k]=v
 
 def multi_opt(p, *args, **kw):
     values = kw.pop('values', ('fix','report',None))
