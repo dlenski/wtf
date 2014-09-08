@@ -73,7 +73,7 @@ def parse_args():
     g.add_argument('inf', metavar="textfile", nargs='*', type=argparse.FileType('rb'), help='Input file(s)', default=[stdin])
     g.add_argument('-o', metavar="outfile", dest='outf', type=argparse.FileType('w'), help='Output file (default is stdout)', default=stdout)
     g2=g.add_mutually_exclusive_group(required=False)
-    g2.add_argument('-i', dest='inplace', action='store_const', const=True, help='In-place editing; allows multiple input files')
+    g2.add_argument('-i', dest='inplace', action='store_const', const=True, help='In-place editing; overwrite each input file with any changes')
     g2.add_argument('-I', dest='inplace', metavar='.EXT', help='Same, but makes backups with specified extension')
 
     g=p.add_argument_group("Trailing space")
@@ -95,7 +95,7 @@ def parse_args():
     g = p.add_mutually_exclusive_group()
     g.add_argument('-q', '--quiet', dest='verbose', action='store_const', const=0, default=1, help="Silent operation")
     g.add_argument('-v', '--verbose', action='count', help="Increasing verbosity")
-    p.add_argument('-X', '--no-exit-codes', action='store_true', help="Always return 0 on success")
+    p.add_argument('-X', '--no-exit-codes', action='store_true', help="Always return 0 on success, even if issues were fixed or reported")
     args = p.parse_args()
 
     # Check for things that don't make sense
