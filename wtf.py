@@ -57,7 +57,6 @@ def multi_opt(p, *args, **kw):
 
     return g
 
-# Parse arguments
 def parse_args():
     p = argparse.ArgumentParser(description='''
         Whitespace Total Fixer. Fixes and/or reports all manner of
@@ -130,7 +129,12 @@ for inf in args.inf:
         fname = inf.name
         name,ext = os.path.splitext(os.path.basename(fname))
         try:
-            outf = NamedTemporaryFile(dir=os.path.dirname(fname), prefix=name+'_tmp_', suffix=ext, delete=True)
+            # The best approach is to defer the decision about whether to keep or delete the output
+            # file until *after* all processing has completed separately. Unfortunately, this doesn't
+            # work on NT where setting NamedTemporaryFile.delete does nothing after the initial
+            # creation of the file.
+            delete = False if os.name=='nt' else True
+            outf = NamedTemporaryFile(dir=os.path.dirname(fname), prefix=name+'_tmp_', suffix=ext, delete=delete)
         except OSError as e:
             p.error("couldn't make temp file for in-place editing: %s" % str(e))
     else:
@@ -258,6 +262,8 @@ for inf in args.inf:
         if not any( fixed[k] for k in actions ):
             # let outf get auto-deleted if we made no changes
             outf.close()
+            if os.name=='nt':
+                os.unlink(outf.name)
         else:
             if isinstance(args.inplace, basestring):
                 ext = args.inplace
