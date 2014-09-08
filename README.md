@@ -91,11 +91,11 @@ enabling the user to fix, report, or ignore the issue.
 Reporting
 ---------
 
-With the `-v` option, WTF will summarize each file processed, if
-issues were found and/or fixed. With `-vv` it will also report
-issue-free files.
+Unless the `-q`/`--quiet` option is used, WTF will summarize each file
+processed in which any whitespace issues were found and/or fixed. With
+`-v` it will also report issue-free files.
 
-    $ wtf -v nightmare.txt > /dev/null
+    $ wtf nightmare.txt > /dev/null
     nightmare.txt LINE 8: WARNING: spaces followed by tabs in whitespace at beginning of line
     nightmare.txt:
         CHOPPED 1 lines with trailing space

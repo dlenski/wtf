@@ -92,7 +92,9 @@ def parse_args():
     multi_opt(g, '-s', '--tab-space-mix', default='report', help='Warn if spaces followed by tabs in whitespace at beginning of line (default %(default)s)',
               values=('report','ignore'), longs=('','ignore-'),shorts=('','I'))
 
-    p.add_argument('-v', '--verbose', action='count', default=0, help="Increasing verbosity")
+    g = p.add_mutually_exclusive_group()
+    g.add_argument('-q', '--quiet', dest='verbose', action='store_const', const=0, default=1, help="Silent operation")
+    g.add_argument('-v', '--verbose', action='count', help="Increasing verbosity")
     p.add_argument('-X', '--no-exit-codes', action='store_true', help="Always return 0 on success")
     args = p.parse_args()
 
