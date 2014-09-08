@@ -5,10 +5,7 @@ from sys import stdin, stdout, stderr, exit
 import re
 import os
 import shutil
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
+from tempfile import NamedTemporaryFile
 
 # Quacks like a dict and an object
 class slurpy(dict):
@@ -126,19 +123,14 @@ lre = re.compile(r'''
 
 # Process files
 for inf in args.inf:
-    # use in-memory copy for inplace
+    # use a temporary file for output if doing "in-place" editing
     if args.inplace is not None:
         fname = inf.name
-        orig = inf
-        inf = StringIO.StringIO(inf.read())
-        orig.close()
-        # make backup if desired
-        if isinstance(args.inplace, basestring):
-            try:
-                shutil.copyfile(fname, fname + args.inplace)
-            except shutil.Error:
-                p.error("could not make backup copy of %s as %s" % (fname, fname + args.inplace))
-        outf = open(fname, "wb")
+        name,ext = os.path.splitext(os.path.basename(fname))
+        try:
+            outf = NamedTemporaryFile(dir=os.path.dirname(fname), prefix=name+'_tmp_', suffix=ext, delete=True)
+        except OSError as e:
+            p.error("couldn't make temp file for in-place editing: %s" % str(e))
     else:
         outf = args.outf
         if inf is stdin and outf is not stdout:
@@ -259,8 +251,36 @@ for inf in args.inf:
             if actions.tab_space_mix:
                 print("\tWARNED ABOUT %d lines with tabs/spaces mix" % seen.tab_space_mix, file=stderr)
 
-    if args.inplace:
-        outf.close()
+    inf.close()
+    if args.inplace is not None:
+        if not any( fixed[k] for k in actions ):
+            # let outf get auto-deleted if we made no changes
+            outf.close()
+        else:
+            if isinstance(args.inplace, basestring):
+                ext = args.inplace
+                if os.path.exists(inf.name + ext):
+                    p.error("can't make backup of %s: %s already exists" % (inf.name, inf.name + ext))
+                try:
+                    os.rename(inf.name, inf.name + ext)
+                except OSError as e:
+                    p.error("can't rename %s to %s: %s" % (inf.name, inf.name + ext, str(e)))
+
+                # don't mark output file with delete=False until all the preceding steps have succeeded
+                outf.delete = False
+                outf.close()
+                shutil.copymode(inf.name + ext, outf.name)
+            else:
+                outf.delete = False
+                outf.close()
+                shutil.copymode(inf.name, outf.name)
+                # rename won't work on Windows if destination exists
+                os.unlink(inf.name)
+
+            os.rename(outf.name, inf.name)
+
+if not args.inplace:
+    outf.close()
 
 if not args.no_exit_codes:
     if all_seen>all_fixed:
