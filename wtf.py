@@ -109,6 +109,122 @@ def parse_args():
 
     return p, args
 
+class FileProcessor(object):
+    lre = re.compile(r'''
+        (?P<ispace>\s*?)
+        (?P<body>(?:\S.*?)?)
+        (?P<trail>\s*?)
+        (?P<eol>(?:\r\n|\n|\r|))$''', re.S | re.X)
+
+    def __init__(self, inf, outf, actions, coerce_eol):
+        self.inf = inf
+        self.outf = outf
+        self.actions = actions
+        self.coerce_eol = coerce_eol
+
+        # each of these a slurpy with same keys as actions,
+        # representing number of issues of each type
+        self.seen = slurpy((k,0) for k in actions)
+        self.fixed = slurpy((k,0) for k in actions)
+
+    # reads from .inf, writes to .outf
+    # yield messages along the way: (verbosity, line, empty, message)
+    def run(self):
+        buffer = []
+        self.first_eol = None
+        self.linesep = None
+        actions = self.actions
+        seen = self.seen
+        fixed = self.fixed
+
+        for ii,line in enumerate(self.inf):
+            # Take the line apart, and save first EOL for matching subsequent lines to it
+            m = self.lre.match(line)
+            ispace, body, trail, eol = m.groups()
+            empty = not body
+            if self.first_eol is None:
+                self.first_eol = eol
+                self.linesep = {'\r\n':'crlf','\n':'lf'}.get(eol, repr(eol))
+
+            yield ( 4, ii+1, empty, repr(m.groups()) )
+
+            # Warn about tab/space mix
+            if actions.tab_space_mix:
+                if ' \t' in ispace:
+                    seen.tab_space_mix += 1
+                    yield (0, ii+1, empty, "WARNING: spaces followed by tabs in whitespace at beginning of line")
+
+            # Fix trailing space
+            if actions.trail_space:
+                if trail:
+                    seen.trail_space += 1
+                    if actions.trail_space=='fix':
+                        fixed.trail_space += 1
+                        trail = ''
+
+            # Line endings (missing, matching, and coercing)
+            if not eol:
+                # there is no line ending...
+                if actions.eof_newl:
+                    seen.eof_newl += 1
+                    if actions.eof_newl=='fix':
+                        # ... but we want one
+                        fixed.eof_newl += 1
+                        if coerce_eol:
+                            eol = coerce_eol
+                        elif self.first_eol:
+                            eol = self.first_eol
+                        else:
+                            eol = os.linesep
+                            self.linesep = {'\r\n':'crlf','\n':'lf'}.get(eol, repr(eol))
+                            yield (0, ii+1, empty, "WARNING: don't know what line ending to add (guessed %s)" % self.linesep)
+            else:
+                # there is a line ending...
+                if eol!=self.first_eol:
+                    if actions.match_eol:
+                        # ... but it doesn't match first line
+                        seen.match_eol += 1
+                        if actions.match_eol=='fix':
+                            fixed.match_eol += 1
+                            eol = self.first_eol
+
+                # Line endings (coercing)
+                if eol!=coerce_eol and coerce_eol:
+                    # ... but it isn't the one we want to force
+                    eol = coerce_eol
+                    seen.coerce_eol += 1
+                    fixed.coerce_eol += 1
+
+            # Put the line back together
+            outline = ispace+body+trail+eol
+            if outline!=line:
+                yield (3, ii+1, empty, "changing %s to %s" % (repr(line), repr(outline)))
+
+            # empty line, could be at end of file
+            if empty:
+                buffer.append(outline)
+            else:
+                if buffer:
+                    outf.write(''.join(buffer))
+                    buffer = []
+                outf.write(outline)
+
+        # handle blank lines at end
+        if buffer:
+            # we have leftover lines ...
+            if actions.eof_blanks:
+                seen.eof_blanks += len(buffer)
+                if actions.eof_blanks=='fix':
+                    # ... which we don't want
+                    fixed.eof_blanks += len(buffer)
+                    buffer = []
+            outf.write(''.join(buffer))
+
+        # Quick sanity check
+        for k in actions:
+            assert fixed[k] in (seen[k],0)
+
+# Parse arguments
 p, args = parse_args()
 
 # Actions that we're going to do
@@ -116,12 +232,6 @@ actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_n
 coerce_eol = dict(crlf='\r\n',lf='\n',native=os.linesep,none=None)[args.coerce_eol]
 all_seen = 0
 all_fixed = 0
-
-lre = re.compile(r'''
-    (?P<ispace>\s*?)
-    (?P<body>(?:\S.*?)?)
-    (?P<trail>\s*?)
-    (?P<eol>(?:\r\n|\n|\r|))$''', re.S | re.X)
 
 # Process files
 for inf in args.inf:
@@ -145,98 +255,12 @@ for inf in args.inf:
         else:
             fname = inf.name
 
-    buffer = []
-    seen = slurpy((k,0) for k in actions)
-    fixed = slurpy((k,0) for k in actions)
-    first_eol = linesep = None
-
-    for ii,line in enumerate(inf):
-        # Take the line apart, and save first EOL for matching subsequent lines to it
-        m = lre.match(line)
-        ispace, body, trail, eol = m.groups()
-        empty = not body
-        if first_eol is None:
-            first_eol = eol
-            linesep = {'\r\n':'crlf','\n':'lf'}.get(eol, repr(eol))
-
-        if args.verbose>=4:
-            print("%s %sLINE %d: %s" % (fname, 'EMPTY ' if empty else '', ii+1, repr(m.groups())), file=stderr)
-
-        # Warn about tab/space mix
-        if actions.tab_space_mix:
-            if ' \t' in ispace:
-                seen.tab_space_mix += 1
-                if actions.tab_space_mix=='report':
-                    print("%s %sLINE %d: WARNING: spaces followed by tabs in whitespace at beginning of line" % (fname, 'EMPTY ' if empty else '', ii+1), file=stderr)
-
-        # Fix trailing space
-        if actions.trail_space:
-            if trail:
-                seen.trail_space += 1
-                if actions.trail_space=='fix':
-                    fixed.trail_space += 1
-                    trail = ''
-
-        # Line endings (missing, matching, and coercing)
-        if not eol:
-            # there is no line ending...
-            if actions.eof_newl:
-                seen.eof_newl += 1
-                if actions.eof_newl=='fix':
-                    # ... but we want one
-                    fixed.eof_newl += 1
-                    if coerce_eol:
-                        eol = coerce_eol
-                    elif first_eol:
-                        eol = first_eol
-                    else:
-                        eol = os.linesep
-                        linesep = {'\r\n':'crlf','\n':'lf'}.get(eol, repr(eol))
-                        print("%s %sLINE %d: WARNING: don't know what line ending to add (guessed %s)" % (fname, 'EMPTY ' if empty else '', ii+1, linesep), file=stderr)
-        else:
-            # there is a line ending...
-            if eol!=first_eol:
-                if actions.match_eol:
-                    # ... but it doesn't match first line
-                    seen.match_eol += 1
-                    if actions.match_eol=='fix':
-                        fixed.match_eol += 1
-                        eol = first_eol
-
-            # Line endings (coercing)
-            if eol!=coerce_eol and coerce_eol:
-                # ... but it isn't the one we want to force
-                eol = coerce_eol
-                seen.coerce_eol += 1
-                fixed.coerce_eol += 1
-
-        # Put the line back together
-        outline = ispace+body+trail+eol
-        if args.verbose>=3 and outline!=line:
-            print("%s %sLINE %d: changing %s to %s" % (fname, 'EMPTY ' if empty else '', ii+1, repr(line), repr(outline)), file=stderr)
-
-        # empty line, could be at end of file
-        if empty:
-            buffer.append(outline)
-        else:
-            if buffer:
-                outf.write(''.join(buffer))
-                buffer = []
-            outf.write(outline)
-
-    # handle blank lines at end
-    if buffer:
-        # we have leftover lines ...
-        if actions.eof_blanks:
-            seen.eof_blanks += len(buffer)
-            if actions.eof_blanks=='fix':
-                # ... which we don't want
-                fixed.eof_blanks += len(buffer)
-                buffer = []
-        outf.write(''.join(buffer))
-
-    for k in actions:
-        assert fixed[k] in (seen[k],0)
+    # Process one file
+    fp = FileProcessor(inf, outf, actions, coerce_eol)
+    for verbose, line, empty, message in fp.run():
+        if args.verbose >= verbose:
+            print("%s %sLINE %d: %s" % (fname, "EMPTY " if empty else "", line, message), file=stderr)
+    fixed, seen = fp.fixed, fp.seen
 
     # count fixes for verbose output
     problems_seen = sum( seen[k] for k in actions )
@@ -252,7 +276,7 @@ for inf in args.inf:
             if actions.eof_newl:
                 print("\t%s newline at EOF" % ('ADDED' if actions.eof_newl=='fix' and fixed.eof_newl else 'SAW MISSING' if seen.eof_newl else 'no change to'), file=stderr)
             if actions.match_eol:
-                print("\t%s %d line endings which didn't match %s from first line" % ('CHANGED' if actions.match_eol=='fix' else 'SAW', seen.match_eol, linesep), file=stderr)
+                print("\t%s %d line endings which didn't match %s from first line" % ('CHANGED' if actions.match_eol=='fix' else 'SAW', seen.match_eol, fp.linesep), file=stderr)
             if coerce_eol:
                 print("\tCOERCED %d line endings to %s" % (seen.coerce_eol, actions.coerce_eol), file=stderr)
             if actions.tab_space_mix:
