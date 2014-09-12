@@ -58,7 +58,8 @@ def multi_opt(p, *args, **kw):
     return g
 
 def parse_args():
-    p = argparse.ArgumentParser(description='''
+    p = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+        description='''
         Whitespace Total Fixer. Fixes and/or reports all manner of
         annoying issues with whitespace or line endings in text files.
 
