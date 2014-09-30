@@ -88,6 +88,11 @@ enabling the user to fix, report, or ignore the issue.
         -s, --tab-space-mix
         -Is, --ignore-tab-space-mix
 
+* Change tabs to a specified number spaces in the whitespace at the
+  beginning of a line (default is not to change tabs at all):
+
+        -x SPACES, --change-tabs SPACES
+
 Reporting
 ---------
 
@@ -114,7 +119,7 @@ Todo
 ----
 
 * Stability tests?
-* Tab/space conversion?
+* Space to tab conversion?
 * Unicode tests?
 
 Bugs

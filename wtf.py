@@ -91,6 +91,7 @@ def parse_args():
     g=p.add_argument_group("Tabs")
     multi_opt(g, '-s', '--tab-space-mix', default='report', help='Warn if spaces followed by tabs in whitespace at beginning of line (default %(default)s)',
               values=('report','ignore'), longs=('','ignore-'),shorts=('','I'))
+    g.add_argument('-x', '--change-tabs', metavar='SPACES', default=None, type=int, help='Change leading tabs to spaces')
 
     g = p.add_mutually_exclusive_group()
     g.add_argument('-q', '--quiet', dest='verbose', action='store_const', const=0, default=1, help="Silent operation")
@@ -153,6 +154,13 @@ class FileProcessor(object):
                 if ' \t' in ispace:
                     seen.tab_space_mix += 1
                     yield (0, ii+1, empty, "WARNING: spaces followed by tabs in whitespace at beginning of line")
+
+            # Convert tabs to spaces
+            if actions.change_tabs is not None:
+                if '\t' in ispace:
+                    ispace = ispace.replace('\t', ' ' * actions.change_tabs)
+                    fixed.change_tabs += 1
+                    seen.change_tabs += 1
 
             # Fix trailing space
             if actions.trail_space:
@@ -228,7 +236,7 @@ class FileProcessor(object):
 p, args = parse_args()
 
 # Actions that we're going to do
-actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','match_eol','coerce_eol','tab_space_mix'))
+actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','match_eol','coerce_eol','tab_space_mix','change_tabs'))
 coerce_eol = dict(crlf='\r\n',lf='\n',native=os.linesep,none=None)[args.coerce_eol]
 all_seen = 0
 all_fixed = 0
@@ -281,6 +289,8 @@ for inf in args.inf:
                 print("\tCOERCED %d line endings to %s" % (seen.coerce_eol, actions.coerce_eol), file=stderr)
             if actions.tab_space_mix:
                 print("\tWARNED ABOUT %d lines with tabs/spaces mix" % seen.tab_space_mix, file=stderr)
+            if actions.change_tabs is not None:
+                print("\tCHANGED tabs to %d spaces on %d lines" % (actions.change_tabs, seen.change_tabs), file=stderr)
 
     inf.close()
     if args.inplace is not None:
