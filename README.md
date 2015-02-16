@@ -12,6 +12,9 @@ whitespace issues it fixes):
 # consistent whitespace from programs that generate text files
 dump_database_schema | wtf.py -o clean_output.sql
 
+# summarize a bunch of files without actually editing them (-0)
+find . -name "*.txt" -exec wtf.py -0 {} \;
+
 # in-place editing
 wtf.py -i file1.txt file2.txt file3.txt
 wtf.py -I.bak file1.txt file2.txt file3.txt # ditto, with backups
@@ -47,7 +50,7 @@ program instead!
 <a name="options"/>Whitespace issues addressed
 ----------------------------------------------
 
-WTF current fixes, or simply reports, a few common types of whitespace
+WTF currently fixes, or simply reports, a few common types of whitespace
 issues. Most of these issues offer three possible command-line options
 enabling the user to fix, report, or ignore the issue.
 
@@ -100,7 +103,7 @@ Unless the `-q`/`--quiet` option is used, WTF will summarize each file
 processed in which any whitespace issues were found and/or fixed. With
 `-v` it will also report issue-free files.
 
-    $ wtf nightmare.txt > /dev/null
+    $ wtf -0 nightmare.txt    # -0 is equivalent to > /dev/null
     nightmare.txt LINE 8: WARNING: spaces followed by tabs in whitespace at beginning of line
     nightmare.txt:
         CHOPPED 1 lines with trailing space
@@ -109,11 +112,11 @@ processed in which any whitespace issues were found and/or fixed. With
         CHANGED 1 line endings which didn't match crlf from first line
         WARNED ABOUT 1 lines with tabs/spaces mix
 
-WTF will return the following return codes on successful operation:
+WTF will return the following exit codes on successful operation:
 
-* 0: no issues seen (or `-X`/`--no-exit-codes` specified)
-* 10: issues fixed
-* 20: unfixed issues seen
+* `0`: no issues seen (or `-X`/`--no-exit-codes` specified)
+* `10`: issues fixed
+* `20`: unfixed issues seen
 
 Todo
 ----
@@ -130,7 +133,7 @@ Anything else?
 
 Author
 ------
-&copy; Daniel Lenski <<dlenski@gmail.com>> (2014-)
+&copy; Daniel Lenski <<dlenski@gmail.com>> (2014-2015)
 
 License
 -------
