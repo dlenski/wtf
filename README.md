@@ -12,12 +12,20 @@ whitespace issues it fixes):
 # consistent whitespace from programs that generate text files
 dump_database_schema | wtf.py -o clean_output.sql
 
-# summarize a bunch of files without actually editing them (-0)
-find . -name "*.txt" -exec wtf.py -0 {} \;
-
 # in-place editing
 wtf.py -i file1.txt file2.txt file3.txt
 wtf.py -I.bak file1.txt file2.txt file3.txt # ditto, with backups
+
+# summarize a bunch of files without actually editing them (-0)
+find . -name "*.txt" -exec wtf.py -0 {} \;
+
+# more advanced: find interesting text files. pass options and a directory
+wtf-find() {
+    find "${@: -1}" -not \( -name .svn -prune -o -name .git -prune \
+         -o -name .hg -prune \) -type f -exec bash -c \
+         'grep -Il "" "$1" &>/dev/null && wtf.py '"${*:1:$#-1}"' "$1"' _ {} \;
+}
+wtf-find -0 .
 
 # exit status
 wtf.py file1.txt file2.txt file3.txt > /dev/null
