@@ -71,8 +71,10 @@ def parse_args():
         http://github.com/dlenski/wtf''')
     g=p.add_argument_group("Input/output modes")
     g.add_argument('inf', metavar="textfile", nargs='*', type=argparse.FileType('rb'), help='Input file(s)', default=[stdin])
-    g.add_argument('-o', metavar="outfile", dest='outf', type=argparse.FileType('w'), help='Output file (default is stdout)', default=stdout)
+
     g2=g.add_mutually_exclusive_group(required=False)
+    g2.add_argument('-o', metavar="outfile", dest='outf', type=argparse.FileType('w'), help='Output file (default is stdout)', default=stdout)
+    g2.add_argument('-0', '--dry-run', dest='outf', action='store_const', const=open(os.devnull, "w"), help="No output")
     g2.add_argument('-i', dest='inplace', action='store_const', const=True, help='In-place editing; overwrite each input file with any changes')
     g2.add_argument('-I', dest='inplace', metavar='.EXT', help='Same, but makes backups with specified extension')
 
@@ -102,11 +104,8 @@ def parse_args():
     # Check for things that don't make sense
     if args.inplace is not None and stdin in args.inf:
         p.error("cannot use stdin for in-place editing (-i/-I); must specify filenames")
-    elif args.outf!=stdout:
-        if args.inplace is not None:
-            p.error("cannot specify both in-place editing (-i/-I) and output file (-o)")
-        elif len(args.inf)>1:
-            p.error("cannot specify multiple input files with a single output file (-o)")
+    elif args.outf!=stdout and len(args.inf)>1:
+        p.error("cannot specify multiple input files with a single output file (-o)")
 
     return p, args
 
