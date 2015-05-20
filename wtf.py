@@ -73,8 +73,8 @@ def parse_args():
     g.add_argument('inf', metavar="textfile", nargs='*', type=argparse.FileType('rb'), help='Input file(s)', default=[stdin])
 
     g2=g.add_mutually_exclusive_group(required=False)
-    g2.add_argument('-o', metavar="outfile", dest='outf', type=argparse.FileType('w'), help='Output file (default is stdout)', default=stdout)
-    g2.add_argument('-0', '--dry-run', dest='outf', action='store_const', const=open(os.devnull, "w"), help="No output")
+    g2.add_argument('-o', metavar="outfile", dest='outf', type=argparse.FileType('wb'), help='Output file (default is stdout)', default=stdout)
+    g2.add_argument('-0', '--dry-run', dest='outf', action='store_const', const=open(os.devnull, 'wb'), help="No output")
     g2.add_argument('-i', dest='inplace', action='store_const', const=True, help='In-place editing; overwrite each input file with any changes')
     g2.add_argument('-I', dest='inplace', metavar='.EXT', help='Same, but makes backups with specified extension')
 
