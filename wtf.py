@@ -92,7 +92,7 @@ def parse_args():
 
     g=p.add_argument_group("Tabs")
     multi_opt(g, '-s', '--tab-space-mix', default='report', help='Warn if spaces followed by tabs in whitespace at beginning of line (default %(default)s)',
-              values=('report','ignore'), longs=('','ignore-'),shorts=('','I'))
+              values=('report',None), longs=('','ignore-'),shorts=('','I'))
     g.add_argument('-x', '--change-tabs', metavar='SPACES', default=None, type=int, help='Change leading tabs to spaces')
 
     g = p.add_mutually_exclusive_group()
