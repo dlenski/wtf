@@ -93,21 +93,25 @@ enabling the user to fix, report, or ignore the issue.
         -E ENDING, --coerce-eol ENDING
 
 * Check for spaces followed by tabs in the whitespace at the beginning
-  of a line; strategy for fixing this condition requires setting either
-  `--change-tabs` or  `--change-spaces` and will then replace the offending
-  whitespace character, or the default is to report and **warn**:
+  of a line; fixing this condition requires setting either
+  `--change-tabs` or `--change-spaces`. The default is to report and
+  **warn**:
 
         -s, --tab-space-mix
         -S, --report-tab-space-mix
         -Is, --ignore-tab-space-mix
 
-* Change tabs to a specified number spaces in the whitespace at the
-  beginning of a line (default is not to change tabs at all):
+* Change tabs in the whitespace at the beginning of a line to the
+  specified number of spaces (default is not to change tabs at
+  all). This option will *not* touch leading tabs when they are mixed
+  with spaces, *unless* `--tab-space-mix` is also specified.
 
         -x SPACES, --change-tabs SPACES
 
-* Change a specified number spaces to tabs in the whitespace at the
-  beginning of a line (default is not to change spaces at all):
+* Change the specified number of consecutive spaces in the whitespace
+  at the beginning of a line to tabs (default is not to change spaces
+  at all). This option will *not* touch leading tabs when they are mixed
+  with spaces, *unless* `--tab-space-mix` is also specified.
 
         -y SPACES, --change-spaces SPACES
 

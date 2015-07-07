@@ -91,9 +91,10 @@ def parse_args():
                    help='Coerce line endings to a specific type: crlf, lf, or native (default %(default)s)');
 
     g=p.add_argument_group("Tabs and Spaces")
-    multi_opt(g, '-s', '--tab-space-mix', default='fix', help='Make sure no mixed spaces and/or tabs exist in whitespace at beginning of line. Fix requires -x or -y SPACES (default %(default)s if --change-tabs/spaces set otherwise defaults to report)')
-    g.add_argument('-x', '--change-tabs', metavar='SPACES', default=None, type=int, help='Change leading tabs to spaces. Where SPACES equals the number of spaces tab characters will be replaced by.')
-    g.add_argument('-y', '--change-spaces', metavar='SPACES', default=None, type=int, help='Change leading spaces to tabs. Where SPACES equals the number of spaces to be replaced by tabs.')
+    multi_opt(g, '-s', '--tab-space-mix', default='report', help='Make sure no mixed spaces and/or tabs exist in leading whitespace; fix requires -x or -y SPACES (default %(default)s)')
+    g2 = g.add_mutually_exclusive_group(required=False)
+    g2.add_argument('-x', '--change-tabs', metavar='NS', default=None, type=int, help='Change each tab characters in leading whitespace to NS spaces.')
+    g2.add_argument('-y', '--change-spaces', metavar='NS', default=None, type=int, help='Change NS consecutive spaces in leading whitespace to tab character.')
 
     g = p.add_mutually_exclusive_group()
     g.add_argument('-q', '--quiet', dest='verbose', action='store_const', const=0, default=1, help="Silent operation")
@@ -106,6 +107,10 @@ def parse_args():
         p.error("cannot use stdin for in-place editing (-i/-I); must specify filenames")
     elif args.outf!=stdout and len(args.inf)>1:
         p.error("cannot specify multiple input files with a single output file (-o)")
+
+    if args.tab_space_mix=='fix' and args.change_tabs is None and args.change_spaces is None:
+         args.tab_space_mix='report'
+         print("changing to --report-tab-space-mix (--fix-tab-space-mix requires --change-tabs or --change-spaces)", file=stderr)
 
     return p, args
 
@@ -137,11 +142,8 @@ class FileProcessor(object):
         seen = self.seen
         fixed = self.fixed
 
-        # for safety; when --change-tabs or --change-spaces are not set switch tab-space-mix to 'report' mode
-        if actions.tab_space_mix=='fix' and actions.change_tabs is None and actions.change_spaces is None:
-             actions.tab_space_mix='report'
-             # alternatively we could error out?
-             #p.error("tab-space-mix fix requires change-tabs or change-spaces SPACES")
+        if actions.tab_space_mix=='fix':
+            assert actions.change_spaces or actions.change_tabs
 
         for ii,line in enumerate(self.inf):
             # Take the line apart, and save first EOL for matching subsequent lines to it
