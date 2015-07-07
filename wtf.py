@@ -90,10 +90,10 @@ def parse_args():
     g.add_argument('-E', '--coerce-eol', action='store', metavar='ENDING', choices=('crlf','lf','native','none'), default='none',
                    help='Coerce line endings to a specific type: crlf, lf, or native (default %(default)s)');
 
-    g=p.add_argument_group("Tabs")
-    multi_opt(g, '-s', '--tab-space-mix', default='report', help='Warn if spaces followed by tabs in whitespace at beginning of line (default %(default)s)',
-              values=('report',None), longs=('','ignore-'),shorts=('','I'))
-    g.add_argument('-x', '--change-tabs', metavar='SPACES', default=None, type=int, help='Change leading tabs to spaces')
+    g=p.add_argument_group("Tabs and Spaces")
+    multi_opt(g, '-s', '--tab-space-mix', default='fix', help='Make sure no mixed spaces and/or tabs exist in whitespace at beginning of line. Fix requires -x or -y SPACES (default %(default)s if --change-tabs/spaces set otherwise defaults to report)')
+    g.add_argument('-x', '--change-tabs', metavar='SPACES', default=None, type=int, help='Change leading tabs to spaces. Where SPACES equals the number of spaces tab characters will be replaced by.')
+    g.add_argument('-y', '--change-spaces', metavar='SPACES', default=None, type=int, help='Change leading spaces to tabs. Where SPACES equals the number of spaces to be replaced by tabs.')
 
     g = p.add_mutually_exclusive_group()
     g.add_argument('-q', '--quiet', dest='verbose', action='store_const', const=0, default=1, help="Silent operation")
@@ -137,29 +137,61 @@ class FileProcessor(object):
         seen = self.seen
         fixed = self.fixed
 
+        # for safety; when --change-tabs or --change-spaces are not set switch tab-space-mix to 'report' mode
+        if actions.tab_space_mix=='fix' and actions.change_tabs is None and actions.change_spaces is None:
+             actions.tab_space_mix='report'
+             # alternatively we could error out?
+             #p.error("tab-space-mix fix requires change-tabs or change-spaces SPACES")
+
         for ii,line in enumerate(self.inf):
             # Take the line apart, and save first EOL for matching subsequent lines to it
             m = self.lre.match(line)
             ispace, body, trail, eol = m.groups()
             empty = not body
+            mixed_leading_whitespace = None
             if self.first_eol is None:
                 self.first_eol = eol
                 self.linesep = {'\r\n':'crlf','\n':'lf'}.get(eol, repr(eol))
 
             yield ( 4, ii+1, empty, repr(m.groups()) )
 
-            # Warn about tab/space mix
+            # Detect tab/space mix
             if actions.tab_space_mix:
-                if ' \t' in ispace:
+                if ' \t' in ispace or '\t ' in ispace:
+                    mixed_leading_whitespace = True
                     seen.tab_space_mix += 1
-                    yield (0, ii+1, empty, "WARNING: spaces followed by tabs in whitespace at beginning of line")
+                    # Warn about tab/space mix
+                    if actions.tab_space_mix=='report':
+                        yield (0, ii+1, empty, "WARNING: mixed use of spaces and tabs at beginning of line")
+                else:
+                    mixed_leading_whitespace = False
 
             # Convert tabs to spaces
             if actions.change_tabs is not None:
                 if '\t' in ispace:
-                    ispace = ispace.replace('\t', ' ' * actions.change_tabs)
-                    fixed.change_tabs += 1
                     seen.change_tabs += 1
+                    # this ensures --ignore-tab-space-mix does not replace anything
+                    # and still allows normal --change-tabs operation
+                    if mixed_leading_whitespace is True and actions.tab_space_mix=='fix':
+                        fixed.tab_space_mix += 1
+                        ispace = ispace.replace('\t', ' ' * actions.change_tabs)
+                        fixed.change_tabs += 1
+                    elif mixed_leading_whitespace is not True:
+                        ispace = ispace.replace('\t', ' ' * actions.change_tabs)
+                        fixed.change_tabs += 1
+            # OR Convert spaces to tabs
+            elif actions.change_spaces is not None:
+                if ' ' in ispace:
+                    seen.change_spaces += 1
+                    if mixed_leading_whitespace is True and actions.tab_space_mix=='fix':
+                        # normalize all leading whitespace to spaces first
+                        ispace = ispace.replace('\t', ' ' * actions.change_spaces)
+                        fixed.tab_space_mix += 1
+                        ispace = ispace.replace(' ' * actions.change_spaces, '\t')
+                        fixed.change_spaces += 1
+                    elif mixed_leading_whitespace is not True:
+                        ispace = ispace.replace(' ' * actions.change_spaces, '\t')
+                        fixed.change_spaces += 1
 
             # Fix trailing space
             if actions.trail_space:
@@ -229,13 +261,15 @@ class FileProcessor(object):
 
         # Quick sanity check
         for k in actions:
-            assert fixed[k] in (seen[k],0)
+            ## these values are allowed not to match if --report-tab-space-mix is enabled
+            if k!='change_tabs' and k!='change_spaces':
+                assert fixed[k] in (seen[k],0)
 
 # Parse arguments
 p, args = parse_args()
 
 # Actions that we're going to do
-actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','match_eol','coerce_eol','tab_space_mix','change_tabs'))
+actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','match_eol','coerce_eol','tab_space_mix','change_tabs','change_spaces'))
 coerce_eol = dict(crlf='\r\n',lf='\n',native=os.linesep,none=None)[args.coerce_eol]
 all_seen = 0
 all_fixed = 0
@@ -287,9 +321,11 @@ for inf in args.inf:
             if coerce_eol:
                 print("\tCOERCED %d line endings to %s" % (seen.coerce_eol, actions.coerce_eol), file=stderr)
             if actions.tab_space_mix:
-                print("\tWARNED ABOUT %d lines with tabs/spaces mix" % seen.tab_space_mix, file=stderr)
+                print("\t%s %d lines with mixed tabs/spaces" % ('CHANGED' if actions.tab_space_mix=='fix' else 'WARNED ABOUT' if actions.tab_space_mix=='report' else 'SAW', seen.tab_space_mix), file=stderr)
             if actions.change_tabs is not None:
-                print("\tCHANGED tabs to %d spaces on %d lines" % (actions.change_tabs, seen.change_tabs), file=stderr)
+                print("\tCHANGED tabs to %d spaces on %d lines" % (actions.change_tabs, fixed.change_tabs if fixed.change_tabs > 0 else seen.change_tabs), file=stderr)
+            if actions.change_spaces is not None:
+                print("\tCHANGED %d spaces to tabs on %d lines" % (actions.change_spaces, fixed.change_spaces if fixed.change_spaces > 0 else seen.change_spaces), file=stderr)
 
     inf.close()
     if args.inplace is not None:
