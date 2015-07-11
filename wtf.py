@@ -89,6 +89,8 @@ def parse_args():
     multi_opt(g, '-m', '--match-eol', default='fix', help='Make sure all lines match the first line (default %(default)s)')
     g.add_argument('-E', '--coerce-eol', action='store', metavar='ENDING', choices=('crlf','lf','native','none'), default='none',
                    help='Coerce line endings to a specific type: crlf, lf, or native (default %(default)s)');
+    g.add_argument('--expect-eol', action='store', metavar='ENDING', choices=('crlf','lf','native','none'), default='none',
+                   help='Report line endings non-matching to a specific type: crlf, lf, or native (default %(default)s)');
 
     g=p.add_argument_group("Tabs and Spaces")
     multi_opt(g, '-s', '--tab-space-mix', default='report', help='Make sure no mixed spaces and/or tabs exist in leading whitespace; fix requires -x or -y SPACES (default %(default)s)')
@@ -219,6 +221,12 @@ class FileProcessor(object):
                             eol = os.linesep
                             self.linesep = {'\r\n':'crlf','\n':'lf'}.get(eol, repr(eol))
                             yield (0, ii+1, empty, "WARNING: don't know what line ending to add (guessed %s)" % self.linesep)
+
+                # Line ending expecting
+                if expect_eol:
+                    seen.expect_eol += 1
+                    fixed.expect_eol += 1
+
             else:
                 # there is a line ending...
                 if eol!=self.first_eol:
@@ -235,6 +243,12 @@ class FileProcessor(object):
                     eol = coerce_eol
                     seen.coerce_eol += 1
                     fixed.coerce_eol += 1
+
+                # Line endings (expecting)
+                if eol!=expect_eol and expect_eol:
+                    # ... but it isn't the one we want to see
+                    seen.expect_eol += 1
+                    fixed.expect_eol += 1
 
             # Put the line back together
             outline = ispace+body+trail+eol
@@ -271,8 +285,9 @@ class FileProcessor(object):
 p, args = parse_args()
 
 # Actions that we're going to do
-actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','match_eol','coerce_eol','tab_space_mix','change_tabs','change_spaces'))
+actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','match_eol','coerce_eol','expect_eol','tab_space_mix','change_tabs','change_spaces'))
 coerce_eol = dict(crlf='\r\n',lf='\n',native=os.linesep,none=None)[args.coerce_eol]
+expect_eol = dict(crlf='\r\n',lf='\n',native=os.linesep,none=None)[args.expect_eol]
 all_seen = 0
 all_fixed = 0
 
@@ -322,6 +337,8 @@ for inf in args.inf:
                 print("\t%s %d line endings which didn't match %s from first line" % ('CHANGED' if actions.match_eol=='fix' else 'SAW', seen.match_eol, fp.linesep), file=stderr)
             if coerce_eol:
                 print("\tCOERCED %d line endings to %s" % (seen.coerce_eol, actions.coerce_eol), file=stderr)
+            if expect_eol:
+                print("\tSAW %d line endings not matching %s" % (seen.expect_eol, args.expect_eol), file=stderr)
             if actions.tab_space_mix:
                 print("\t%s %d lines with mixed tabs/spaces" % ('CHANGED' if actions.tab_space_mix=='fix' else 'WARNED ABOUT' if actions.tab_space_mix=='report' else 'SAW', seen.tab_space_mix), file=stderr)
             if actions.change_tabs is not None:
