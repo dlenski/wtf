@@ -91,7 +91,7 @@ def parse_args():
                    help='Coerce line endings to a specific type: crlf, lf, or native (default %(default)s)');
 
     g=p.add_argument_group("Tabs and Spaces")
-    multi_opt(g, '-s', '--tab-space-mix', default='report', help='Make sure no mixed spaces and/or tabs exist in leading whitespace; fix requires -x or -y SPACES (default %(default)s)')
+    multi_opt(g, '-s', '--tab-space-mix', default='report', help='Make sure no mixed spaces and/or tabs exist in leading whitespace; fix requires -x or -y NS spaces (default %(default)s)')
     g2 = g.add_mutually_exclusive_group(required=False)
     g2.add_argument('-x', '--change-tabs', metavar='NS', default=None, type=int, help='Change each tab characters in leading whitespace to NS spaces.')
     g.add_argument('-a', '--change-non-leading-tabs', metavar='NS', default=None, type=int, help='Change each tab characters after non blanks to NS spaces.')
@@ -270,7 +270,7 @@ class FileProcessor(object):
 
         # Quick sanity check
         for k in actions:
-            ## these values are allowed not to match if --report-tab-space-mix is enabled
+            # these values are allowed not to match if --report-tab-space-mix is enabled
             if k!='change_tabs' and k!='change_spaces':
                 assert fixed[k] in (seen[k],0)
 
