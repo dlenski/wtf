@@ -115,6 +115,12 @@ enabling the user to fix, report, or ignore the issue.
 
         -y SPACES, --change-spaces SPACES
 
+* Change tabs in the non leading whitespace to the specified number of
+  spaces (default is not to change tabs at all). This option can be used
+  together with `-x` or `-y`.
+
+        -a SPACES, --change-non-leading-tabs SPACES
+
 Reporting
 ---------
 

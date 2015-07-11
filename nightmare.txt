@@ -8,6 +8,9 @@ differentnewline
  	 	bad spacing
 
 
+    space indented line with two		tabs in the middle.
+//	tab after non blank characters.
+label	 : mixed alignment characters
 
 borf
 borf

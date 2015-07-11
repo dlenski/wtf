@@ -94,6 +94,7 @@ def parse_args():
     multi_opt(g, '-s', '--tab-space-mix', default='report', help='Make sure no mixed spaces and/or tabs exist in leading whitespace; fix requires -x or -y SPACES (default %(default)s)')
     g2 = g.add_mutually_exclusive_group(required=False)
     g2.add_argument('-x', '--change-tabs', metavar='NS', default=None, type=int, help='Change each tab characters in leading whitespace to NS spaces.')
+    g.add_argument('-a', '--change-non-leading-tabs', metavar='NS', default=None, type=int, help='Change each tab characters after non blanks to NS spaces.')
     g2.add_argument('-y', '--change-spaces', metavar='NS', default=None, type=int, help='Change NS consecutive spaces in leading whitespace to tab character.')
 
     g = p.add_mutually_exclusive_group()
@@ -195,6 +196,12 @@ class FileProcessor(object):
                         ispace = ispace.replace(' ' * actions.change_spaces, '\t')
                         fixed.change_spaces += 1
 
+            if body and actions.change_non_leading_tabs is not None:
+                if '\t' in body:
+                    body = body.replace('\t', ' ' * actions.change_non_leading_tabs)
+                    seen.change_non_leading_tabs += 1
+                    fixed.change_non_leading_tabs += 1
+
             # Fix trailing space
             if actions.trail_space:
                 if trail:
@@ -271,7 +278,7 @@ class FileProcessor(object):
 p, args = parse_args()
 
 # Actions that we're going to do
-actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','match_eol','coerce_eol','tab_space_mix','change_tabs','change_spaces'))
+actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','match_eol','coerce_eol','tab_space_mix','change_tabs','change_non_leading_tabs','change_spaces'))
 coerce_eol = dict(crlf='\r\n',lf='\n',native=os.linesep,none=None)[args.coerce_eol]
 all_seen = 0
 all_fixed = 0
@@ -326,6 +333,8 @@ for inf in args.inf:
                 print("\t%s %d lines with mixed tabs/spaces" % ('CHANGED' if actions.tab_space_mix=='fix' else 'WARNED ABOUT' if actions.tab_space_mix=='report' else 'SAW', seen.tab_space_mix), file=stderr)
             if actions.change_tabs is not None:
                 print("\tCHANGED tabs to %d spaces on %d lines" % (actions.change_tabs, fixed.change_tabs if fixed.change_tabs > 0 else seen.change_tabs), file=stderr)
+            if actions.change_non_leading_tabs is not None:
+                print("\tCHANGED tabs to %d spaces on %d lines after non blanks" % (actions.change_non_leading_tabs, fixed.change_non_leading_tabs if fixed.change_non_leading_tabs > 0 else seen.change_non_leading_tabs), file=stderr)
             if actions.change_spaces is not None:
                 print("\tCHANGED %d spaces to tabs on %d lines" % (actions.change_spaces, fixed.change_spaces if fixed.change_spaces > 0 else seen.change_spaces), file=stderr)
 
