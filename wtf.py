@@ -57,6 +57,13 @@ def multi_opt(p, *args, **kw):
 
     return g
 
+class StoreTupleAction(argparse.Action):
+    def __call__(self, p, ns, values, ostr):
+        setattr(ns, self.dest, (self.const, values))
+
+eol_name2val = {'crlf':'\r\n', 'lf':'\n', 'native':os.linesep, 'first':None}
+eol_val2name = {'\r\n':'crlf', '\n':'lf'}
+
 def parse_args():
     p = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
         description='''
@@ -88,11 +95,10 @@ def parse_args():
     multi_opt(g, '-n', '--eof-newl', default='fix', help='Ensure newline appears at end-of-file (default %(default)s)')
 
     g=p.add_argument_group("End of line characters")
-    multi_opt(g, '-m', '--match-eol', default='fix', help='Make sure all lines match the first line (default %(default)s)')
-    g.add_argument('-E', '--coerce-eol', action='store', metavar='ENDING', choices=('crlf','lf','native','none'), default='none',
-                   help='Coerce line endings to a specific type: crlf, lf, or native (default %(default)s)');
-    g.add_argument('--expect-eol', action='store', metavar='ENDING', choices=('crlf','lf','native','none'), default='none',
-                   help='Report line endings non-matching to a specific type: crlf, lf, or native (default %(default)s)');
+    g.add_argument('-E', '--coerce-eol', choices=eol_name2val.keys(), action=StoreTupleAction, const='fix', default=('fix','first'),
+        help='Ensure specific line endings: crlf, lf, native, or first (default is to make all line endings match the first line)')
+    g.add_argument('-e', '--expect-eol', choices=eol_name2val.keys(), action=StoreTupleAction, const='report', dest='coerce_eol')
+    g.add_argument('-Ie', '--ignore-eol', action='store_const', const=None, dest='coerce_eol')
 
     g=p.add_argument_group("Tabs and Spaces")
     multi_opt(g, '-s', '--tab-space-mix', default='report', help='Make sure no mixed spaces and/or tabs exist in leading whitespace; fix requires -x or -y SPACES (default %(default)s)')
@@ -125,11 +131,10 @@ class FileProcessor(object):
         (?P<trail>\s*?)
         (?P<eol>(?:\r\n|\n|\r|))$''', re.S | re.X)
 
-    def __init__(self, inf, outf, actions, coerce_eol):
+    def __init__(self, inf, outf, actions):
         self.inf = inf
         self.outf = outf
         self.actions = actions
-        self.coerce_eol = coerce_eol
 
         # each of these a slurpy with same keys as actions,
         # representing number of issues of each type
@@ -140,7 +145,11 @@ class FileProcessor(object):
     # yield messages along the way: (verbosity, line, empty, message)
     def run(self):
         buffer = []
-        self.first_eol = None
+        if self.actions.coerce_eol:
+            self.eol_action = self.actions.coerce_eol[0]
+            self.eol_value = eol_name2val[ self.actions.coerce_eol[1] ]
+        else:
+            self.eol_action = self.eol_value = None
         self.linesep = None
         actions = self.actions
         seen = self.seen
@@ -150,14 +159,15 @@ class FileProcessor(object):
             assert actions.change_spaces or actions.change_tabs
 
         for ii,line in enumerate(self.inf):
-            # Take the line apart, and save first EOL for matching subsequent lines to it
+            # Take the line apart
             m = self.lre.match(line)
             ispace, body, trail, eol = m.groups()
             empty = not body
             mixed_leading_whitespace = None
-            if self.first_eol is None:
-                self.first_eol = eol
-                self.linesep = {'\r\n':'crlf','\n':'lf'}.get(eol, repr(eol))
+
+            # Save first EOL for matching subsequent lines to it
+            if self.eol_value is None:
+                self.eol_value = eol
 
             yield ( 4, ii+1, empty, repr(m.groups()) )
 
@@ -215,42 +225,19 @@ class FileProcessor(object):
                     if actions.eof_newl=='fix':
                         # ... but we want one
                         fixed.eof_newl += 1
-                        if coerce_eol:
-                            eol = coerce_eol
-                        elif self.first_eol:
-                            eol = self.first_eol
+                        if self.eol_value:
+                            eol = self.eol_value
                         else:
-                            eol = os.linesep
-                            self.linesep = {'\r\n':'crlf','\n':'lf'}.get(eol, repr(eol))
-                            yield (0, ii+1, empty, "WARNING: don't know what line ending to add (guessed %s)" % self.linesep)
-
-                # Line ending expecting
-                if expect_eol:
-                    seen.expect_eol += 1
-                    fixed.expect_eol += 1
-
+                            self.eol_value = eol = os.linesep
+                            yield (0, ii+1, empty, "WARNING: don't know what line ending to add (guessed %s)" % eol_val2name.get(eol, repr(eol)))
             else:
-                # there is a line ending...
-                if eol!=self.first_eol:
-                    if actions.match_eol:
-                        # ... but it doesn't match first line
-                        seen.match_eol += 1
-                        if actions.match_eol=='fix':
-                            fixed.match_eol += 1
-                            eol = self.first_eol
-
-                # Line endings (coercing)
-                if eol!=coerce_eol and coerce_eol:
-                    # ... but it isn't the one we want to force
-                    eol = coerce_eol
+                # there is a line ending ...
+                if eol!=self.eol_value:
+                    # ... but it doesn't match the expected value
                     seen.coerce_eol += 1
-                    fixed.coerce_eol += 1
-
-                # Line endings (expecting)
-                if eol!=expect_eol and expect_eol:
-                    # ... but it isn't the one we want to see
-                    seen.expect_eol += 1
-                    fixed.expect_eol += 1
+                    if self.eol_action=='fix':
+                        fixed.coerce_eol += 1
+                        eol = self.eol_value
 
             # Put the line back together
             outline = ispace+body+trail+eol
@@ -287,9 +274,7 @@ class FileProcessor(object):
 p, args = parse_args()
 
 # Actions that we're going to do
-actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','match_eol','coerce_eol','expect_eol','tab_space_mix','change_tabs','change_spaces'))
-coerce_eol = dict(crlf='\r\n',lf='\n',native=os.linesep,none=None)[args.coerce_eol]
-expect_eol = dict(crlf='\r\n',lf='\n',native=os.linesep,none=None)[args.expect_eol]
+actions = slurpy((k,getattr(args,k)) for k in ('trail_space','eof_blanks','eof_newl','tab_space_mix','coerce_eol','change_tabs','change_spaces'))
 all_seen = 0
 all_fixed = 0
 
@@ -316,7 +301,7 @@ for inf in args.inf:
             fname = inf.name
 
     # Process one file
-    fp = FileProcessor(inf, outf, actions, coerce_eol)
+    fp = FileProcessor(inf, outf, actions)
     for verbose, line, empty, message in fp.run():
         if args.verbose >= verbose:
             print("%s %sLINE %d: %s" % (fname, "EMPTY " if empty else "", line, message), file=stderr)
@@ -335,12 +320,9 @@ for inf in args.inf:
                 print("\t%s %d blank lines at EOF" % ('CHOPPED' if actions.eof_blanks=='fix' else 'SAW', seen.eof_blanks), file=stderr)
             if actions.eof_newl:
                 print("\t%s newline at EOF" % ('ADDED' if actions.eof_newl=='fix' and fixed.eof_newl else 'SAW MISSING' if seen.eof_newl else 'no change to'), file=stderr)
-            if actions.match_eol:
-                print("\t%s %d line endings which didn't match %s from first line" % ('CHANGED' if actions.match_eol=='fix' else 'SAW', seen.match_eol, fp.linesep), file=stderr)
-            if coerce_eol:
-                print("\tCOERCED %d line endings to %s" % (seen.coerce_eol, actions.coerce_eol), file=stderr)
-            if expect_eol:
-                print("\tSAW %d line endings not matching %s" % (seen.expect_eol, args.expect_eol), file=stderr)
+            if actions.coerce_eol:
+                print("\t%s %d line endings which didn't match %s%s" % ('CHANGED' if actions.coerce_eol[0]=='fix' else 'SAW', seen.coerce_eol,
+                    eol_val2name[fp.eol_value], ' from first line' if actions.coerce_eol[1]=='first' else ''), file=stderr)
             if actions.tab_space_mix:
                 print("\t%s %d lines with mixed tabs/spaces" % ('CHANGED' if actions.tab_space_mix=='fix' else 'WARNED ABOUT' if actions.tab_space_mix=='report' else 'SAW', seen.tab_space_mix), file=stderr)
             if actions.change_tabs is not None:

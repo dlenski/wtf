@@ -84,15 +84,12 @@ enabling the user to fix, report, or ignore the issue.
   mixing of lf/crlf). Default is to **fix** non-matching EOL
   characters by making them all the same as the first line of the
   file. The desired EOL markers can also be set to a specific value
-  (lf/crlf/native), in which case all lines will unconditionally
-  receive this marker. Additionally `--expect-eol` can be used to
-  report line endings not matching the value set (lf/crlf/native).
+  (`lf`/`crlf`/`native`), in which case all lines will unconditionally
+  receive this marker.
 
-        -m, --match-eol
-        -M, --report-match-eol
-        -Im, --ignore-match-eol
         -E ENDING, --coerce-eol ENDING
-        --expect-eol ENDING
+        -e ENDING, --expect-eol ENDING
+        -Ie, --ignore-eol
 
 * Check for spaces followed by tabs in the whitespace at the beginning
   of a line; fixing this condition requires setting either
