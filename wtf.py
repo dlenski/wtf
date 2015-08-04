@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!python2 -u
 from __future__ import print_function
 import argparse
 from sys import stdin, stdout, stderr, exit
