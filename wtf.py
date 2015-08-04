@@ -63,6 +63,7 @@ class StoreTupleAction(argparse.Action):
 
 eol_name2val = {'crlf':'\r\n', 'lf':'\n', 'native':os.linesep, 'first':None}
 eol_val2name = {'\r\n':'crlf', '\n':'lf'}
+nullout = open(os.devnull, 'wb')
 
 def parse_args():
     p = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -76,7 +77,6 @@ def parse_args():
             20: unfixed issues seen
 
         http://github.com/dlenski/wtf''')
-    nullout = open(os.devnull, 'wb')
 
     g=p.add_argument_group("Input/output modes")
     g.add_argument('inf', metavar="textfile", nargs='*', type=argparse.FileType('rb'), help='Input file(s)', default=[stdin])
@@ -295,7 +295,7 @@ for inf in args.inf:
             p.error("couldn't make temp file for in-place editing: %s" % str(e))
     else:
         outf = args.outf
-        if inf is stdin and outf is not stdout:
+        if inf is stdin and outf not in (stdout, nullout):
             fname = outf.name
         else:
             fname = inf.name
