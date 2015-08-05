@@ -65,6 +65,12 @@ eol_name2val = {'crlf':'\r\n', 'lf':'\n', 'native':os.linesep, 'first':None}
 eol_val2name = {'\r\n':'crlf', '\n':'lf'}
 nullout = open(os.devnull, 'wb')
 
+# make stdin and stdout not do any EOL translations on Windows
+if os.name=='nt':
+    import msvcrt
+    msvcrt.setmode(stdin.fileno(), os.O_BINARY)
+    msvcrt.setmode(stdout.fileno(), os.O_BINARY)
+
 def parse_args():
     p = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
         description='''
@@ -287,7 +293,7 @@ for inf in args.inf:
         try:
             # The best approach is to defer the decision about whether to keep or delete the output
             # file until *after* all processing has completed separately. Unfortunately, this doesn't
-            # work on NT where setting NamedTemporaryFile.delete does nothing after the initial
+            # work on Windows where setting NamedTemporaryFile.delete does nothing after the initial
             # creation of the file.
             delete = False if os.name=='nt' else True
             outf = NamedTemporaryFile(dir=os.path.dirname(fname), prefix=name+'_tmp_', suffix=ext, delete=delete)
