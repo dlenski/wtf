@@ -5,11 +5,25 @@ Identifies and/or fixes inconsistent whitespace and line endings in
 text files, so that they don't clog up your commits to version control
 systems like Git, Mercurial, or Subversion.
 
-**Quick Install**:  
-`curl https://raw.githubusercontent.com/dlenski/wtf/master/wtf.py > ~/bin/wtf.py && chmod 0755 !#:3`
+### Why you should use it:
 
-How to use it ([see below](#options) for options to control exactly which
-whitespace issues it fixes):
+* It's like an incomprehensible shell-script one-liner (e.g. `sed -e 's/LINENOISE/'`), but way better
+* It's similar to [`git
+  stripspace`](https://www.kernel.org/pub/software/scm/git/docs/git-stripspace.html),
+  but more flexible and detailed.
+* `wtf.py` is a simple Python2 script (tested with 2.7.5) with *no
+  dependencies beyond the standard Python library*.
+
+
+### Quick Install
+```
+curl https://raw.githubusercontent.com/dlenski/wtf/master/wtf.py > ~/bin/wtf.py && chmod 0755 !#:3
+```
+
+### How to use it
+
+[See below](#options) for options to control exactly which
+whitespace issues it fixes, but here are some examples:
 
 ```bash
 # consistent whitespace from programs that generate text files
@@ -38,15 +52,6 @@ elif (( $? == 20 )); then
   echo "unfixed issues!"
 fi
 ```
-
-Why you should use it:
-
-* It's like an incomprehensible shell-script one-liner (e.g. `sed -e 's/LINENOISE/'`), but way better
-* It's similar to [`git
-  stripspace`](https://www.kernel.org/pub/software/scm/git/docs/git-stripspace.html),
-  but more flexible and detailed.
-* `wtf.py` is a simple Python2 script (tested with 2.7.5) with *no
-  dependencies beyond the standard Python library*.
 
 Exciting origin story
 ---------------------
