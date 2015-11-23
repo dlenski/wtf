@@ -1,3 +1,15 @@
+  * [Whitespace Total Fixer](#whitespace-total-fixer)
+    * [Why you should use it](#why-you-should-use-it)
+    * [Quick Install](#quick-install)
+    * [How to use it](#how-to-use-it)
+  * [Exciting origin story](#exciting-origin-story)
+  * [Whitespace issues addressed](#whitespace-issues-addressed)
+  * [Reporting](#reporting)
+  * [Todo](#todo)
+  * [Bugs](#bugs)
+  * [Author](#author)
+  * [License](#license)
+
 Whitespace Total Fixer
 ======================
 
