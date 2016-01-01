@@ -255,9 +255,9 @@ class FileProcessor(object):
                 buffer.append(outline)
             else:
                 if buffer:
-                    outf.write(''.join(buffer))
+                    self.outf.write(''.join(buffer))
                     buffer = []
-                outf.write(outline)
+                self.outf.write(outline)
 
         # handle blank lines at end
         if buffer:
@@ -268,7 +268,7 @@ class FileProcessor(object):
                     # ... which we don't want
                     fixed.eof_blanks += len(buffer)
                     buffer = []
-            outf.write(''.join(buffer))
+            self.outf.write(''.join(buffer))
 
         # Quick sanity check
         for k in actions:
