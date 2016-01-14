@@ -61,8 +61,8 @@ class StoreTupleAction(argparse.Action):
     def __call__(self, p, ns, values, ostr):
         setattr(ns, self.dest, (self.const, values))
 
-eol_name2val = {'crlf':'\r\n', 'lf':'\n', 'native':os.linesep, 'first':None}
-eol_val2name = {'\r\n':'crlf', '\n':'lf'}
+eol_name2val = {'crlf':'\r\n', 'lf':'\n', 'cr':'\r', 'native':os.linesep, 'first':None}
+eol_val2name = {'\r\n':'crlf', '\n':'lf', '\r':'cr'}
 nullout = open(os.devnull, 'wb')
 
 # make stdin and stdout not do any EOL translations on Windows
