@@ -3,8 +3,8 @@
     * [Quick Install](#quick-install)
     * [How to use it](#how-to-use-it)
     * [Git `pre-commit` hooks](#git-pre-commit-hooks)
-      * [In-place cleanup](#in-place-cleanup)
-      * [Commit-only cleanup](#commit-only-cleanup)
+      * [Careful version](#careful-version)
+      * [Simple version](#simple-version)
   * [Exciting origin story](#exciting-origin-story)
   * [Whitespace issues addressed](#whitespace-issues-addressed)
   * [Reporting](#reporting)
@@ -78,11 +78,37 @@ prior to every commit.
 Create the file `.git/hooks/pre-commit` in your repository, and ensure that it is executable
 (`chmod +x .git/hooks/pre-commit`).
 
-### In-place cleanup
+### Careful version
+
+This version will run `wtf`, with the default options, on all the
+to-be-committed text files. It operates only on the contents of the index ("staging area") so it
+will play nicely with `git add --patch` and it won't touch the files in your working tree
+**won't be modified**.
+
+```bash
+#!/bin/sh
+
+wtf_options='-q'
+tmp=$(mktemp)
+
+# Run Whitespace Total Fixer on index contents WITHOUT touching working directory
+git diff-index --cached HEAD --diff-filter=ACMRTU |
+while read _ MODE _ SHA1 _ FILE
+do
+    if ! ( git cat-file blob $SHA1 | wtf $wtf_options > $tmp ); then
+        git update-index --cacheinfo $MODE $(git hash-object -w $tmp) "$FILE"
+        echo "Fixed whitespace in $FILE" >&2
+    fi
+done
+rm -f $tmp 2> /dev/null
+```
+
+### Simple version
 
 This version will run `wtf -i`, with the default options, on all the
 to-be-committed text files. They will be cleaned up in the commit, as
-well as in your working tree.
+well as in your working tree. **This version will not play nicely with
+`git add --patch`.**
 
 ```bash
 #!/bin/sh
@@ -95,30 +121,6 @@ for committee in $committees
 do
 	wtf -i "$committee" || git add "$committee"
 done
-```
-
-### Commit-only cleanup
-
-This version will run `wtf`, with the default options, on all the
-to-be-committed text files. The cleaned-up versions will be used *in
-the commit*, but the files in your working tree **won't be modified**.
-
-```bash
-#!/bin/sh
-# get a list of to-be-committed filepaths, EXCLUDING files considered
-# by Git to be binary
-committees=$(git diff --cached --numstat --diff-filter=ACMRTU|egrep -v ^-|cut -f3-)
-tmp=$(mktemp)
-
-# Run Whitespace Total Fixer, and add files changed by it
-# WITHOUT modifying them in the working directory
-for committee in $committees
-do
-    if ! wtf "$committee" > $tmp; then
-         git update-index --cacheinfo 000000 $(git hash-object -w $tmp) "$committee"
-    fi
-done
-rm -f $tmp 2> /dev/null
 ```
 
 Exciting origin story
