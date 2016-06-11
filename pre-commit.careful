@@ -1,0 +1,15 @@
+#!/bin/sh
+
+wtf_options='-q'
+tmp=$(mktemp)
+
+# Run Whitespace Total Fixer on index contents WITHOUT modifying working directory
+git diff-index --cached HEAD --diff-filter=ACMRTU |
+while read _ MODE _ SHA1 _ FILE
+do
+    if ! ( git cat-file blob $SHA1 | wtf $wtf_options > $tmp ); then
+        git update-index --cacheinfo $MODE $(git hash-object -w $tmp) "$FILE"
+        echo "Fixed whitespace in $FILE" >&2
+    fi
+done
+rm -f $tmp 2> /dev/null
