@@ -2,6 +2,9 @@
     * [Why you should use it](#why-you-should-use-it)
     * [Quick Install](#quick-install)
     * [How to use it](#how-to-use-it)
+    * [Git `pre-commit` hooks](#git-pre-commit-hooks)
+      * [In-place cleanup](#in-place-cleanup)
+      * [Commit-only cleanup](#commit-only-cleanup)
   * [Exciting origin story](#exciting-origin-story)
   * [Whitespace issues addressed](#whitespace-issues-addressed)
   * [Reporting](#reporting)
@@ -63,6 +66,59 @@ if (( $? == 10 )); then
 elif (( $? == 20 )); then
   echo "unfixed issues!"
 fi
+```
+
+Git `pre-commit` hooks
+----------------------
+
+You can use [Git `pre-commit` hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks)
+to automatically run `wtf` and cleanup whitespace in your repository
+prior to every commit.
+
+Create the file `.git/hooks/pre-commit` in your repository, and ensure that it is executable
+(`chmod +x .git/hooks/pre-commit`).
+
+### In-place cleanup
+
+This version will run `wtf -i`, with the default options, on all the
+to-be-committed text files. They will be cleaned up in the commit, as
+well as in your working tree.
+
+```bash
+#!/bin/sh
+# get a list of to-be-committed filepaths, EXCLUDING files considered
+# by Git to be binary
+committees=$(git diff --cached --numstat --diff-filter=ACMRTU|egrep -v ^-|cut -f3-)
+
+# Run Whitespace Total Fixer in-place, and re-add files modified by it
+for committee in $committees
+do
+	wtf -i "$committee" || git add "$committee"
+done
+```
+
+### Commit-only cleanup
+
+This version will run `wtf`, with the default options, on all the
+to-be-committed text files. The cleaned-up versions will be used *in
+the commit*, but the files in your working tree **won't be modified**.
+
+```bash
+#!/bin/sh
+# get a list of to-be-committed filepaths, EXCLUDING files considered
+# by Git to be binary
+committees=$(git diff --cached --numstat --diff-filter=ACMRTU|egrep -v ^-|cut -f3-)
+tmp=$(mktemp)
+
+# Run Whitespace Total Fixer, and add files changed by it
+# WITHOUT modifying them in the working directory
+for committee in $committees
+do
+    if ! wtf "$committee" > $tmp; then
+         git update-index --cacheinfo 000000 $(git hash-object -w $tmp) "$committee"
+    fi
+done
+rm -f $tmp 2> /dev/null
 ```
 
 Exciting origin story
