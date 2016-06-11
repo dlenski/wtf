@@ -74,6 +74,7 @@ Git `pre-commit` hooks
 You can use [Git `pre-commit` hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks)
 to automatically run `wtf` and cleanup whitespace in your repository
 prior to every commit.
+(You can bypass the hook, however, with `git commit -n`.)
 
 Create the file `.git/hooks/pre-commit` in your repository, and ensure that it is executable
 (`chmod +x .git/hooks/pre-commit`).
