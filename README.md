@@ -226,7 +226,7 @@ Anything else?
 
 Author
 ------
-&copy; Daniel Lenski <<dlenski@gmail.com>> (2014-2015)
+&copy; Daniel Lenski <<dlenski@gmail.com>> (2014-2016)
 
 License
 -------
