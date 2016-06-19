@@ -81,28 +81,11 @@ Create the file `.git/hooks/pre-commit` in your repository, and ensure that it i
 
 ### Careful version
 
-This version will run `wtf`, with the default options, on all the
-to-be-committed text files. It operates only on the contents of the index ("staging area") so it
-will play nicely with `git add --patch` and it won't touch the files in your working tree
-**won't be modified**.
-
-```bash
-#!/bin/sh
-
-wtf_options='-q'
-tmp=$(mktemp)
-
-# Run Whitespace Total Fixer on index contents WITHOUT touching working directory
-git diff-index --cached HEAD --diff-filter=ACMRTU |
-while read _ MODE _ SHA1 _ FILE
-do
-    if ! ( git cat-file blob $SHA1 | wtf $wtf_options > $tmp ); then
-        git update-index --cacheinfo $MODE $(git hash-object -w $tmp) "$FILE"
-        echo "Fixed whitespace in $FILE" >&2
-    fi
-done
-rm -f $tmp 2> /dev/null
-```
+[This version](https://github.com/dlenski/wtf/blob/HEAD/pre-commit.careful)
+will run `wtf`, with the default options, on all the to-be-committed
+text files. It operates only on the contents of the index ("staging
+area") so it will play nicely with `git add --patch` and it won't
+touch the files in your working tree **won't be modified**.
 
 ### Simple version
 
