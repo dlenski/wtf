@@ -8,8 +8,12 @@ git diff-index --cached HEAD --diff-filter=ACMRTU |
 while read _ MODE _ SHA1 _ FILE
 do
     if ! ( git cat-file blob $SHA1 | wtf $wtf_options > $tmp ); then
-        git update-index --cacheinfo $MODE $(git hash-object -w $tmp) "$FILE"
-        echo "Fixed whitespace in $FILE" >&2
+        if [ -s $tmp ]; then
+            git update-index --cacheinfo $MODE $(git hash-object -w $tmp) "$FILE"
+            echo "Fixed whitespace in $FILE" >&2
+        else
+            echo "Couldn't fix whitespace with wtf -- is it in your PATH?" >&2
+        fi
     fi
 done
 rm -f $tmp 2> /dev/null
