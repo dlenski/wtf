@@ -79,23 +79,24 @@ prior to every commit.
 Create the file `.git/hooks/pre-commit` in your repository, and ensure that it is executable
 (`chmod +x .git/hooks/pre-commit`).
 
-### Careful version
+### Commit-only version
 
 [This version](https://github.com/dlenski/wtf/blob/HEAD/pre-commit.careful)
 will run `wtf`, with the default options, on all the to-be-committed
 text files. It operates only on the contents of the index ("staging
-area") so it will play nicely with `git add --patch` and it won't
-touch the files in your working tree **won't be modified**.
+area"), so it will play nicely with `git add --patch` and the files in your working tree **won't be modified**.  Note that when a file changes in your commit but remains unchanged in your working tree, the file will be marked `modified` by `git status` immediately after the commit.
 
-### Simple version
+### In-place version
 
-This version will run `wtf -i`, with the default options, on all the
+This version will run `wtf` with `-i` and any options you add, on all the
 to-be-committed text files. They will be cleaned up in the commit, as
 well as in your working tree. **This version will not play nicely with
 `git add --patch`.**
 
 ```bash
 #!/bin/sh
+wtf_options='-i'
+
 # get a list of to-be-committed filepaths, EXCLUDING files considered
 # by Git to be binary
 committees=$(git diff --cached --numstat --diff-filter=ACMRTU|egrep -v ^-|cut -f3-)
@@ -103,7 +104,7 @@ committees=$(git diff --cached --numstat --diff-filter=ACMRTU|egrep -v ^-|cut -f
 # Run Whitespace Total Fixer in-place, and re-add files modified by it
 for committee in $committees
 do
-	wtf -i "$committee" || git add "$committee"
+	wtf $wtf_options "$committee" || git add "$committee"
 done
 ```
 
