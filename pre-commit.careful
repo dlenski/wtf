@@ -1,11 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
 wtf_options='-q'
 tmp=$(mktemp /tmp/wtf.XXXX) # BSD/OSX version of mktemp requires template
 
 # Run Whitespace Total Fixer on index contents WITHOUT modifying working directory
-git diff-index --cached HEAD --diff-filter=ACMRTU |
-while read _ MODE _ SHA1 _ FILE
+git diff-index --raw -z --cached HEAD --diff-filter=ACMRTU |
+while read -d '' _ MODE _ SHA1 _ && read -d '' FILE
 do
     if ! ( git cat-file blob $SHA1 | wtf $wtf_options > $tmp ); then
         if [ -s $tmp ]; then
