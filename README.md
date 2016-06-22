@@ -81,21 +81,29 @@ Create the file `.git/hooks/pre-commit` in your repository, and ensure that it i
 
 ### Careful version
 
+This version only modifies your commits, and does not touch Git's
+working tree.  If you understand and use Git's index ("staging area"),
+you should use this version. It will play nicely with `git add --patch`.
+
+Note that when a file changes in your commit but remains unchanged in your working tree, the file will be marked `modified` by `git status` immediately after the commit.
+
 [This version](https://github.com/dlenski/wtf/blob/HEAD/pre-commit.careful)
 will run `wtf`, with the default options, on all the to-be-committed
-text files. It operates only on the contents of the index ("staging
-area") so it will play nicely with `git add --patch` and it won't
-touch the files in your working tree **won't be modified**.
+text files.
 
 ### Simple version
 
-This version will run `wtf -i`, with the default options, on all the
-to-be-committed text files. They will be cleaned up in the commit, as
-well as in your working tree. **This version will not play nicely with
+This version modifies Git's working tree as well as your commits. **This version will not play nicely with
 `git add --patch`.**
+
+This version will run `wtf -i`, with any other options you add to `wtf_options`, on all the
+to-be-committed text files. They will be cleaned up in the commit, as
+well as in your working tree.
 
 ```bash
 #!/bin/sh
+wtf_options=''
+
 # get a list of to-be-committed filepaths, EXCLUDING files considered
 # by Git to be binary
 committees=$(git diff --cached --numstat --diff-filter=ACMRTU|egrep -v ^-|cut -f3-)
@@ -103,7 +111,7 @@ committees=$(git diff --cached --numstat --diff-filter=ACMRTU|egrep -v ^-|cut -f
 # Run Whitespace Total Fixer in-place, and re-add files modified by it
 for committee in $committees
 do
-	wtf -i "$committee" || git add "$committee"
+	wtf -i $wtf_options "$committee" || git add "$committee"
 done
 ```
 
