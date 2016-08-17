@@ -7,7 +7,9 @@ tmp=$(mktemp /tmp/wtf.XXXX) # BSD/OSX version of mktemp requires template
 git diff-index --raw -z --cached HEAD --diff-filter=ACMRTU |
 while read -d '' _ MODE _ SHA1 _ && read -d '' FILE
 do
-    if ! ( git cat-file blob $SHA1 | wtf $wtf_options > $tmp ); then
+    if [ "$MODE" == 120000 ]; then
+        true # ignore symlinks
+    elif ! ( git cat-file blob $SHA1 | wtf $wtf_options > $tmp ); then
         if [ -s $tmp ]; then
             git update-index --cacheinfo $MODE $(git hash-object -w $tmp) "$FILE"
             echo "Fixed whitespace in $FILE" >&2
