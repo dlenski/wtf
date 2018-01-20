@@ -8,5 +8,9 @@ python:
   - "2.7"
 
 script:
-  ./wtf.py      tests/nightmare.txt | diff -q - tests/nightmare_wtf.txt      &&
-  ./wtf.py -sx8 tests/nightmare.txt | diff -q - tests/nightmare_wtf_-sx8.txt
+  - export t1=$(mktemp) t2=$(mktemp) t3=$(mktemp)
+  - base64 -d tests/nightmare.txt.b64 > $t1
+  - base64 -d tests/nightmare_wtf.txt.b64 > $t2
+  - base64 -d tests/nightmare_wtf_-sx8.txt.b64 > $t3
+  - ./wtf.py      $t1 | diff -q - $t2 &&
+    ./wtf.py -sx8 $t1 | diff -q - $t3
