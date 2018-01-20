@@ -1,0 +1,12 @@
+notifications:
+  email:
+    false
+
+language: python
+
+python:
+  - "2.7"
+
+script:
+  ./wtf.py      tests/nightmare.txt | diff -q - tests/nightmare_wtf.txt      &&
+  ./wtf.py -sx8 tests/nightmare.txt | diff -q - tests/nightmare_wtf_-sx8.txt

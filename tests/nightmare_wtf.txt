@@ -1,0 +1,14 @@
+  fnord
+	boom bang
+
+	ow
+
+differentnewline
+
+ 	 	bad spacing
+
+
+
+borf
+borf
+nonewl

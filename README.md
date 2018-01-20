@@ -1,3 +1,12 @@
+Whitespace Total Fixer
+======================
+
+Identifies and/or fixes inconsistent whitespace and line endings in
+text files, so that they don't clog up your commits to version control
+systems like Git, Mercurial, or Subversion.
+
+[![Build Status](https://api.travis-ci.org/dlenski/wtf.png)](https://travis-ci.org/dlenski/wtf)
+
   * [Whitespace Total Fixer](#whitespace-total-fixer)
     * [Why you should use it](#why-you-should-use-it)
     * [Quick Install](#quick-install)
@@ -12,13 +21,6 @@
   * [Bugs](#bugs)
   * [Author](#author)
   * [License](#license)
-
-Whitespace Total Fixer
-======================
-
-Identifies and/or fixes inconsistent whitespace and line endings in
-text files, so that they don't clog up your commits to version control
-systems like Git, Mercurial, or Subversion.
 
 ### Why you should use it:
 
