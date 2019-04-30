@@ -19,6 +19,7 @@ systems like Git, Mercurial, or Subversion.
   * [Reporting](#reporting)
   * [Todo](#todo)
   * [Bugs](#bugs)
+    * [Bash completion](#bash-completion)
   * [Author](#author)
   * [License](#license)
 
@@ -219,6 +220,17 @@ Bugs
 Corrupts source code files written in the [Whitespace programming language](https://en.wikipedia.org/wiki/Whitespace_(programming_language)).
 
 Anything else?
+
+### Bash completion
+
+If you are having problems with tab completion in Bash,
+it is probably because of default completion rules for the unrelated
+utility [`wtf(6)`](https://linux.die.net/man/6/wtf).
+You can override this by adding the following to your `~/.bashrc`:
+
+```bash
+complete -o default -o bashdefault wtf
+```
 
 Author
 ------
