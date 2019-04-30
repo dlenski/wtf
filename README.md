@@ -220,6 +220,7 @@ Bugs
 Corrupts source code files written in the [Whitespace programming language](https://en.wikipedia.org/wiki/Whitespace_(programming_language)).
 
 Anything else?
+Create a [pull request](https://github.com/dlenski/wtf/pulls)!
 
 ### Bash completion
 
