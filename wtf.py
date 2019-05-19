@@ -147,6 +147,9 @@ class FileProcessor(object):
         self.seen = slurpy((k,0) for k in actions)
         self.fixed = slurpy((k,0) for k in actions)
 
+        # whether the file was empty
+        self.empty_file = True
+
     # reads from .inf, writes to .outf
     # yield messages along the way: (verbosity, line, empty, message)
     def run(self):
@@ -165,6 +168,8 @@ class FileProcessor(object):
             assert actions.change_spaces or actions.change_tabs
 
         for ii,line in enumerate(self.inf):
+            self.empty_file = False
+
             # Take the line apart
             m = self.lre.match(line)
             ispace, body, trail, eol = m.groups()
@@ -259,6 +264,8 @@ class FileProcessor(object):
                     buffer = []
                 self.outf.write(outline)
 
+        # end of loop over each line
+
         # handle blank lines at end
         if buffer:
             # we have leftover lines ...
@@ -317,7 +324,13 @@ for inf in args.inf:
     problems_seen = sum( seen[k] for k in actions )
     all_seen += problems_seen
     all_fixed += sum( fixed[k] for k in actions )
-    if args.verbose>=1:
+
+    if args.verbose>=2 and fp.empty_file:
+        print("%s:\n\tempty file - no action taken" % fname, file=stderr)
+        # Can't do the full --verbose output, because not all the fp
+        # instance variables have been initialized.
+
+    elif args.verbose>=1:
         if problems_seen>0 or args.verbose>=2:
             print("%s:" % fname, file=stderr)
             if actions.trail_space:
