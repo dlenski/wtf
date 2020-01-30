@@ -60,7 +60,8 @@ class StoreTupleAction(argparse.Action):
     def __call__(self, p, ns, values, ostr):
         setattr(ns, self.dest, (self.const, values))
 
-eol_name2val = {'crlf':b'\r\n', 'lf':b'\n', 'cr':b'\r', 'native':os.linesep.encode('ascii'), 'first':None}
+native_eol = os.linesep.encode()
+eol_name2val = {'crlf':b'\r\n', 'lf':b'\n', 'cr':b'\r', 'native':native_eol, 'first':None}
 eol_val2name = {b'\r\n':'crlf', b'\n':'lf', b'\r':'cr'}
 nullout = open(os.devnull, 'wb')
 
@@ -237,7 +238,7 @@ class FileProcessor(object):
                         if self.eol_value:
                             eol = self.eol_value
                         else:
-                            self.eol_value = eol = os.linesep.encode()
+                            self.eol_value = eol = native_eol
                             yield (0, ii+1, empty, "WARNING: don't know what line ending to add (guessed %s)" % eol_val2name.get(eol, repr(eol)))
             else:
                 # there is a line ending ...
