@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
+from __future__ import print_function
 import argparse
-from sys import stdin, stdout, stderr, exit
+from sys import stdin, stdout, stderr, exit, version_info
 import re
 import os
 import shutil
 from tempfile import NamedTemporaryFile
+
+if version_info < (3,0):
+    raise SystemExit("ERROR: Python v3.0+ required; you are using Python %s" % '.'.join(map(str, version_info)))
 
 # Quacks like a dict and an object
 class slurpy(dict):
