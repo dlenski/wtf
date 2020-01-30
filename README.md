@@ -29,8 +29,7 @@ systems like Git, Mercurial, or Subversion.
 * It's similar to [`git
   stripspace`](https://www.kernel.org/pub/software/scm/git/docs/git-stripspace.html),
   but more flexible and detailed.
-* `wtf.py` is a simple Python2 script (tested with 2.7.5) with *no
-  dependencies beyond the standard Python library*.
+* `wtf.py` is a simple Python3 script with *no dependencies beyond the standard Python library*.
 
 
 ### Quick Install
@@ -234,7 +233,7 @@ complete -o default -o bashdefault wtf
 
 Author
 ------
-&copy; Daniel Lenski <<dlenski@gmail.com>> (2014-2016)
+&copy; Daniel Lenski <<dlenski@gmail.com>> (2014-2020)
 
 License
 -------
