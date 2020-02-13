@@ -360,8 +360,9 @@ for inf in args.inf:
                 shutil.copymode(inf.name + ext, outf.name)
             else:
                 shutil.copymode(inf.name, outf.name)
-                # rename won't work on Windows if destination exists
-                os.unlink(inf.name)
+                # replacing original file is non-atomic on Windows (rename won't work if destination exists)
+                if os.name=='nt':
+                    os.unlink(inf.name)
 
             os.rename(outf.name, inf.name)
 
