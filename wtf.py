@@ -300,11 +300,8 @@ for inf in args.inf:
         name,ext = os.path.splitext(os.path.basename(fname))
         try:
             # The best approach is to defer the decision about whether to keep or delete the output
-            # file until *after* all processing has completed separately. Unfortunately, this doesn't
-            # work on Windows where setting NamedTemporaryFile.delete does nothing after the initial
-            # creation of the file.
-            delete = False if os.name=='nt' else True
-            outf = NamedTemporaryFile(dir=os.path.dirname(fname), prefix=name+'_tmp_', suffix=ext, delete=delete)
+            # file until *after* all processing has completed separately.
+            outf = NamedTemporaryFile(dir=os.path.dirname(fname), prefix=name+'_tmp_', suffix=ext, delete=False)
         except OSError as e:
             p.error("couldn't make temp file for in-place editing: %s" % str(e))
     else:
@@ -346,11 +343,10 @@ for inf in args.inf:
 
     inf.close()
     if args.inplace is not None:
+        outf.close()
         if not any( fixed[k] for k in actions ):
-            # let outf get auto-deleted if we made no changes
-            outf.close()
-            if os.name=='nt':
-                os.unlink(outf.name)
+            # delete outf if we made no changes
+            os.unlink(outf.name)
         else:
             if isinstance(args.inplace, str):
                 ext = args.inplace
@@ -361,13 +357,8 @@ for inf in args.inf:
                 except OSError as e:
                     p.error("can't rename %s to %s: %s" % (inf.name, inf.name + ext, str(e)))
 
-                # don't mark output file with delete=False until all the preceding steps have succeeded
-                outf.delete = False
-                outf.close()
                 shutil.copymode(inf.name + ext, outf.name)
             else:
-                outf.delete = False
-                outf.close()
                 shutil.copymode(inf.name, outf.name)
                 # rename won't work on Windows if destination exists
                 os.unlink(inf.name)
