@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 from __future__ import print_function
 import argparse
 from sys import stdin, stdout, stderr, exit, version_info
@@ -6,9 +6,6 @@ import re
 import os
 import shutil
 from tempfile import NamedTemporaryFile
-
-if version_info < (3,0):
-    raise SystemExit("ERROR: Python v3.0+ required; you are using Python %s" % '.'.join(map(str, version_info)))
 
 # Quacks like a dict and an object
 class slurpy(dict):
@@ -69,9 +66,10 @@ eol_name2val = {'crlf':b'\r\n', 'lf':b'\n', 'cr':b'\r', 'native':native_eol, 'fi
 eol_val2name = {b'\r\n':'crlf', b'\n':'lf', b'\r':'cr'}
 nullout = open(os.devnull, 'wb')
 
-# need binary streams
-stdin = stdin.buffer
-stdout = stdout.buffer
+# need binary streams in Python3
+if version_info >= (3,0):
+    stdin = stdin.buffer
+    stdout = stdout.buffer
 
 # make stdin and stdout not do any EOL translations on Windows
 if os.name=='nt':
