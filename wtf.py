@@ -1,7 +1,7 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 from __future__ import print_function
 import argparse
-from sys import stdin, stdout, stderr, exit
+from sys import stdin, stdout, stderr, exit, version_info
 import re
 import os
 import shutil
@@ -61,9 +61,15 @@ class StoreTupleAction(argparse.Action):
     def __call__(self, p, ns, values, ostr):
         setattr(ns, self.dest, (self.const, values))
 
-eol_name2val = {'crlf':'\r\n', 'lf':'\n', 'cr':'\r', 'native':os.linesep, 'first':None}
-eol_val2name = {'\r\n':'crlf', '\n':'lf', '\r':'cr', None:'unknown'}
+native_eol = os.linesep.encode()
+eol_name2val = {'crlf':b'\r\n', 'lf':b'\n', 'cr':b'\r', 'native':native_eol, 'first':None}
+eol_val2name = {b'\r\n':'crlf', b'\n':'lf', b'\r':'cr', None:'unknown'}
 nullout = open(os.devnull, 'wb')
+
+# need binary streams in Python3
+if version_info >= (3,0):
+    stdin = stdin.buffer
+    stdout = stdout.buffer
 
 # make stdin and stdout not do any EOL translations on Windows
 if os.name=='nt':
@@ -131,7 +137,7 @@ def parse_args():
     return p, args
 
 class FileProcessor(object):
-    lre = re.compile(r'''
+    lre = re.compile(br'''
         (?P<ispace>\s*?)
         (?P<body>(?:\S.*?)?)
         (?P<trail>\s*?)
@@ -179,7 +185,7 @@ class FileProcessor(object):
 
             # Detect tab/space mix
             if actions.tab_space_mix:
-                if ' \t' in ispace or '\t ' in ispace:
+                if b' \t' in ispace or b'\t ' in ispace:
                     mixed_leading_whitespace = True
                     seen.tab_space_mix += 1
                     # Warn about tab/space mix
@@ -190,29 +196,29 @@ class FileProcessor(object):
 
             # Convert tabs to spaces
             if actions.change_tabs is not None:
-                if '\t' in ispace:
+                if b'\t' in ispace:
                     seen.change_tabs += 1
                     # this ensures --ignore-tab-space-mix does not replace anything
                     # and still allows normal --change-tabs operation
                     if mixed_leading_whitespace is True and actions.tab_space_mix=='fix':
                         fixed.tab_space_mix += 1
-                        ispace = ispace.replace('\t', ' ' * actions.change_tabs)
+                        ispace = ispace.replace(b'\t', b' ' * actions.change_tabs)
                         fixed.change_tabs += 1
                     elif mixed_leading_whitespace is not True:
-                        ispace = ispace.replace('\t', ' ' * actions.change_tabs)
+                        ispace = ispace.replace(b'\t', b' ' * actions.change_tabs)
                         fixed.change_tabs += 1
             # OR Convert spaces to tabs
             elif actions.change_spaces is not None:
-                if ' ' in ispace:
+                if b' ' in ispace:
                     seen.change_spaces += 1
                     if mixed_leading_whitespace is True and actions.tab_space_mix=='fix':
                         # normalize all leading whitespace to spaces first
-                        ispace = ispace.replace('\t', ' ' * actions.change_spaces)
+                        ispace = ispace.replace(b'\t', b' ' * actions.change_spaces)
                         fixed.tab_space_mix += 1
-                        ispace = ispace.replace(' ' * actions.change_spaces, '\t')
+                        ispace = ispace.replace(b' ' * actions.change_spaces, b'\t')
                         fixed.change_spaces += 1
                     elif mixed_leading_whitespace is not True:
-                        ispace = ispace.replace(' ' * actions.change_spaces, '\t')
+                        ispace = ispace.replace(b' ' * actions.change_spaces, b'\t')
                         fixed.change_spaces += 1
 
             # Fix trailing space
@@ -221,7 +227,7 @@ class FileProcessor(object):
                     seen.trail_space += 1
                     if actions.trail_space=='fix':
                         fixed.trail_space += 1
-                        trail = ''
+                        trail = b''
 
             # Line endings (missing, matching, and coercing)
             if not eol:
@@ -234,7 +240,7 @@ class FileProcessor(object):
                         if self.eol_value:
                             eol = self.eol_value
                         else:
-                            self.eol_value = eol = os.linesep
+                            self.eol_value = eol = native_eol
                             yield (0, ii+1, empty, "WARNING: don't know what line ending to add (guessed %s)" % eol_val2name.get(eol, repr(eol)))
             else:
                 # there is a line ending ...
@@ -255,7 +261,7 @@ class FileProcessor(object):
                 buffer.append(outline)
             else:
                 if buffer:
-                    self.outf.write(''.join(buffer))
+                    self.outf.write(b''.join(buffer))
                     buffer = []
                 self.outf.write(outline)
 
@@ -268,7 +274,7 @@ class FileProcessor(object):
                     # ... which we don't want
                     fixed.eof_blanks += len(buffer)
                     buffer = []
-            self.outf.write(''.join(buffer))
+            self.outf.write(b''.join(buffer))
 
         # Quick sanity check
         for k in actions:
@@ -292,11 +298,8 @@ for inf in args.inf:
         name,ext = os.path.splitext(os.path.basename(fname))
         try:
             # The best approach is to defer the decision about whether to keep or delete the output
-            # file until *after* all processing has completed separately. Unfortunately, this doesn't
-            # work on Windows where setting NamedTemporaryFile.delete does nothing after the initial
-            # creation of the file.
-            delete = False if os.name=='nt' else True
-            outf = NamedTemporaryFile(dir=os.path.dirname(fname), prefix=name+'_tmp_', suffix=ext, delete=delete)
+            # file until *after* all processing has completed separately.
+            outf = NamedTemporaryFile(dir=os.path.dirname(fname), prefix=name+'_tmp_', suffix=ext, delete=False)
         except OSError as e:
             p.error("couldn't make temp file for in-place editing: %s" % str(e))
     else:
@@ -338,13 +341,12 @@ for inf in args.inf:
 
     inf.close()
     if args.inplace is not None:
+        outf.close()
         if not any( fixed[k] for k in actions ):
-            # let outf get auto-deleted if we made no changes
-            outf.close()
-            if os.name=='nt':
-                os.unlink(outf.name)
+            # delete outf if we made no changes
+            os.unlink(outf.name)
         else:
-            if isinstance(args.inplace, basestring):
+            if isinstance(args.inplace, str):
                 ext = args.inplace
                 if os.path.exists(inf.name + ext):
                     p.error("can't make backup of %s: %s already exists" % (inf.name, inf.name + ext))
@@ -353,16 +355,12 @@ for inf in args.inf:
                 except OSError as e:
                     p.error("can't rename %s to %s: %s" % (inf.name, inf.name + ext, str(e)))
 
-                # don't mark output file with delete=False until all the preceding steps have succeeded
-                outf.delete = False
-                outf.close()
                 shutil.copymode(inf.name + ext, outf.name)
             else:
-                outf.delete = False
-                outf.close()
                 shutil.copymode(inf.name, outf.name)
-                # rename won't work on Windows if destination exists
-                os.unlink(inf.name)
+                # replacing original file is non-atomic on Windows (rename won't work if destination exists)
+                if os.name=='nt':
+                    os.unlink(inf.name)
 
             os.rename(outf.name, inf.name)
 

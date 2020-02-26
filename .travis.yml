@@ -6,6 +6,10 @@ language: python
 
 python:
   - "2.7"
+  - "3.5"
+  - "3.6"
+  - "3.7"
+  - "3.8"
 
 script:
   - export t1=$(mktemp) t2=$(mktemp) t3=$(mktemp)
