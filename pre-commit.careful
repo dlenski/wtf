@@ -2,9 +2,10 @@
 
 wtf_options='-q'
 tmp=$(mktemp /tmp/wtf.XXXX) # BSD/OSX version of mktemp requires template
+hh=$(git rev-parse -q --verify HEAD || echo 4b825dc642cb6eb9a060e54bf8d69288fbee4904) # empty tree
 
 # Run Whitespace Total Fixer on index contents WITHOUT modifying working directory
-git diff-index --raw -z --cached HEAD --diff-filter=ACMRTU -- |
+git diff-index --raw -z --cached $hh --diff-filter=ACMRTU -- |
 while read -d '' _ MODE _ SHA1 _ && read -d '' FILE
 do
     if [ "$MODE" == 120000 ]; then
