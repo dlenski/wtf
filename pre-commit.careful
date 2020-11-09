@@ -10,6 +10,9 @@ while read -d '' _ MODE _ SHA1 _ && read -d '' FILE
 do
     if [ "$MODE" == 120000 ]; then
         true # ignore symlinks
+    elif git check-attr -a -- "$FILE" | grep -Eq ': (binary: set|text: unset)$'; then
+         # ignore files marked as binary or non-text; see gitattributes(5) and git-check-attr(1)
+        echo "No whitespace checking for file '$FILE'; marked +binary or -text"
     elif ! ( git cat-file blob $SHA1 | wtf $wtf_options > $tmp ); then
         if [ -s $tmp ]; then
             git update-index --cacheinfo $MODE $(git hash-object -w $tmp) "$FILE"
