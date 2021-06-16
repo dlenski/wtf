@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import argparse
-from sys import stdin, stdout, stderr, exit, version_info
+from sys import stdin, stdout, stderr, exit
 import re
 import os
 import shutil
@@ -66,9 +66,8 @@ eol_val2name = {b'\r\n':'crlf', b'\n':'lf', b'\r':'cr', None:'unknown'}
 nullout = open(os.devnull, 'wb')
 
 # need binary streams in Python3
-if version_info >= (3,0):
-    stdin = stdin.buffer
-    stdout = stdout.buffer
+stdin = stdin.buffer
+stdout = stdout.buffer
 
 # make stdin and stdout not do any EOL translations on Windows
 if os.name=='nt':
