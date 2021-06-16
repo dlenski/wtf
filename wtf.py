@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from __future__ import print_function
 import argparse
 from sys import stdin, stdout, stderr, exit, version_info
 import re
