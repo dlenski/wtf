@@ -254,7 +254,7 @@ class FileProcessor(object):
             # Put the line back together
             outline = ispace+body+trail+eol
             if outline!=line:
-                yield (3, ii+1, empty, "changing %s to %s" % (repr(line), repr(outline)))
+                yield (3, ii + 1, empty, f"changing {line!r} to {outline!r}")
 
             # empty line, could be at end of file
             if empty:
@@ -301,7 +301,7 @@ for inf in args.inf:
             # file until *after* all processing has completed separately.
             outf = NamedTemporaryFile(dir=fname.parent, prefix=name + '_tmp_', suffix=ext, delete=False)
         except OSError as e:
-            p.error("couldn't make temp file for in-place editing: %s" % str(e))
+            p.error(f"couldn't make temp file for in-place editing: {e}")
     else:
         fname = Path(inf.name)
         outf = args.outf
