@@ -4,6 +4,7 @@ from sys import stdin, stdout, stderr, exit
 import re
 import os
 import shutil
+from contextlib import redirect_stdout
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -322,22 +323,23 @@ for inf in args.inf:
     all_fixed += sum( fixed[k] for k in actions )
     if args.verbose>=1:
         if problems_seen>0 or args.verbose>=2:
-            print("%s:" % fname, file=stderr)
-            if actions.trail_space:
-                print("\t%s %d lines with trailing space" % ('CHOPPED' if actions.trail_space=='fix' else 'SAW', seen.trail_space), file=stderr)
-            if actions.eof_blanks:
-                print("\t%s %d blank lines at EOF" % ('CHOPPED' if actions.eof_blanks=='fix' else 'SAW', seen.eof_blanks), file=stderr)
-            if actions.eof_newl:
-                print("\t%s newline at EOF" % ('ADDED' if actions.eof_newl=='fix' and fixed.eof_newl else 'SAW MISSING' if seen.eof_newl else 'no change to'), file=stderr)
-            if actions.coerce_eol:
-                print("\t%s %d line endings which didn't match %s%s" % ('CHANGED' if actions.coerce_eol[0]=='fix' else 'SAW', seen.coerce_eol,
-                    eol_val2name[fp.eol_value], ' from first line' if actions.coerce_eol[1]=='first' else ''), file=stderr)
-            if actions.tab_space_mix:
-                print("\t%s %d lines with mixed tabs/spaces" % ('CHANGED' if actions.tab_space_mix=='fix' else 'WARNED ABOUT' if actions.tab_space_mix=='report' else 'SAW', seen.tab_space_mix), file=stderr)
-            if actions.change_tabs is not None:
-                print("\tCHANGED tabs to %d spaces on %d lines" % (actions.change_tabs, fixed.change_tabs if fixed.change_tabs > 0 else seen.change_tabs), file=stderr)
-            if actions.change_spaces is not None:
-                print("\tCHANGED %d spaces to tabs on %d lines" % (actions.change_spaces, fixed.change_spaces if fixed.change_spaces > 0 else seen.change_spaces), file=stderr)
+            with redirect_stdout(stderr):
+                print("%s:" % fname)
+                if actions.trail_space:
+                    print("\t%s %d lines with trailing space" % ('CHOPPED' if actions.trail_space == 'fix' else 'SAW', seen.trail_space))
+                if actions.eof_blanks:
+                    print("\t%s %d blank lines at EOF" % ('CHOPPED' if actions.eof_blanks == 'fix' else 'SAW', seen.eof_blanks))
+                if actions.eof_newl:
+                    print("\t%s newline at EOF" % ('ADDED' if actions.eof_newl == 'fix' and fixed.eof_newl else 'SAW MISSING' if seen.eof_newl else 'no change to'))
+                if actions.coerce_eol:
+                    print("\t%s %d line endings which didn't match %s%s" % ('CHANGED' if actions.coerce_eol[0] == 'fix' else 'SAW', seen.coerce_eol,
+                                                                            eol_val2name[fp.eol_value], ' from first line' if actions.coerce_eol[1] == 'first' else ''))
+                if actions.tab_space_mix:
+                    print("\t%s %d lines with mixed tabs/spaces" % ('CHANGED' if actions.tab_space_mix == 'fix' else 'WARNED ABOUT' if actions.tab_space_mix == 'report' else 'SAW', seen.tab_space_mix))
+                if actions.change_tabs is not None:
+                    print("\tCHANGED tabs to %d spaces on %d lines" % (actions.change_tabs, fixed.change_tabs if fixed.change_tabs > 0 else seen.change_tabs))
+                if actions.change_spaces is not None:
+                    print("\tCHANGED %d spaces to tabs on %d lines" % (actions.change_spaces, fixed.change_spaces if fixed.change_spaces > 0 else seen.change_spaces))
 
     inf.close()
     if args.inplace is not None:
