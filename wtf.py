@@ -4,6 +4,7 @@ from sys import stdin, stdout, stderr, exit
 import re
 import os
 import shutil
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 # Quacks like a dict and an object
@@ -292,20 +293,21 @@ all_fixed = 0
 for inf in args.inf:
     # use a temporary file for output if doing "in-place" editing
     if args.inplace is not None:
-        fname = inf.name
-        name,ext = os.path.splitext(os.path.basename(fname))
+        fname = Path(inf.name)
+        name, ext = fname.stem, fname.suffix
         try:
             # The best approach is to defer the decision about whether to keep or delete the output
             # file until *after* all processing has completed separately.
-            outf = NamedTemporaryFile(dir=os.path.dirname(fname), prefix=name+'_tmp_', suffix=ext, delete=False)
+            outf = NamedTemporaryFile(dir=fname.parent, prefix=name + '_tmp_', suffix=ext, delete=False)
         except OSError as e:
             p.error("couldn't make temp file for in-place editing: %s" % str(e))
     else:
+        fname = Path(inf.name)
         outf = args.outf
         if inf is stdin and outf not in (stdout, nullout):
-            fname = outf.name
+            fname = Path(outf.name)
         else:
-            fname = inf.name
+            fname = Path(inf.name)
 
     # Process one file
     fp = FileProcessor(inf, outf, actions)
