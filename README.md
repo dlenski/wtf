@@ -77,22 +77,32 @@ Git `pre-commit` hooks
 You can use [Git `pre-commit` hooks](https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks)
 to automatically run `wtf` and cleanup whitespace in your repository
 prior to every commit.
-(You can bypass the hook, however, with `git commit -n`.)
-
-Create the file `.git/hooks/pre-commit` in your repository, and ensure that it is executable
-(`chmod +x .git/hooks/pre-commit`).
+(You can bypass the hook, however, with `git commit [--no-verify|-n]`.)
 
 ### Careful version
 
-This version only modifies your commits, and does not touch Git's
-working tree.  If you understand and use Git's index ("staging area"),
-you should use this version. It will play nicely with `git add --patch`.
-
-Note that when a file changes in your commit but remains unchanged in your working tree, the file will be marked `modified` by `git status` immediately after the commit.
-
-[This version](https://github.com/dlenski/wtf/blob/HEAD/pre-commit.careful)
+The [pre-commit.careful](https://github.com/dlenski/wtf/blob/HEAD/pre-commit.careful) hook
 will run `wtf`, with the default options, on all the to-be-committed
-text files.
+text files. You can easily use it as-is by creating a symlink, for example
+by running the following in your repository's working directory:
+```sh
+ln -s /path/to/wtf/source/pre-commit.careful .git/hooks/pre-commit
+```
+
+If you want to modify it, create the file `.git/hooks/pre-commit` in your
+repository's working directory, and ensure that it is executable (with
+`chmod +x .git/hooks/pre-commit`).
+
+Features:
+
+1. This hook _only_ modifies your commits, and does not touch Git's
+   working tree. If you understand and use Git's index ("staging area"),
+   this should make sense. It will play nicely with `git add --patch`.
+2. It skips over files marked as `binary` or non-text (`-text`)
+   according to your repository's  https://git-scm.com/docs/gitattributes
+3. Note that when a file changes in your commit but remains unchanged in
+   your working tree, the file will be marked `modified` by `git status`
+   immediately after the commit.
 
 ### Simple version
 
