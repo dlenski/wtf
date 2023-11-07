@@ -115,8 +115,8 @@ def parse_args():
     g=p.add_argument_group("Tabs and Spaces")
     multi_opt(g, '-s', '--tab-space-mix', default='report', help='Make sure no mixed spaces and/or tabs exist in leading whitespace; fix requires -x or -y SPACES (default %(default)s)')
     g2 = g.add_mutually_exclusive_group(required=False)
-    g2.add_argument('-x', '--change-tabs', metavar='NS', default=None, type=int, help='Change each tab characters in leading whitespace to NS spaces.')
-    g2.add_argument('-y', '--change-spaces', metavar='NS', default=None, type=int, help='Change NS consecutive spaces in leading whitespace to tab character.')
+    g2.add_argument('-x', '--change-tabs', metavar='NS', nargs='?', const=-1, default=None, type=int, help='Change each tab characters in leading whitespace to NS spaces. Without NS - only reporting.')
+    g2.add_argument('-y', '--change-spaces', metavar='NS', nargs='?', const=-1, default=None, type=int, help='Change NS consecutive spaces in leading whitespace to tab character. Without NS - only reporting.')
 
     g = p.add_mutually_exclusive_group()
     g.add_argument('-q', '--quiet', dest='verbose', action='store_const', const=0, default=1, help="Silent operation")
@@ -133,6 +133,9 @@ def parse_args():
     if args.tab_space_mix=='fix' and args.change_tabs is None and args.change_spaces is None:
          args.tab_space_mix='report'
          print("changing to --report-tab-space-mix (--fix-tab-space-mix requires --change-tabs or --change-spaces)", file=stderr)
+
+    if  args.tab_space_mix=='report' and ((args.change_tabs is not None and args.change_tabs >= 0) or (args.change_spaces is not None and args.change_spaces >= 0)):
+        p.error("report tab-space-mix does not match with --change-tabs or --change-spaces)")
 
     return p, args
 
@@ -200,13 +203,18 @@ class FileProcessor(object):
                     seen.change_tabs += 1
                     # this ensures --ignore-tab-space-mix does not replace anything
                     # and still allows normal --change-tabs operation
+
                     if mixed_leading_whitespace is True and actions.tab_space_mix=='fix':
                         fixed.tab_space_mix += 1
                         ispace = ispace.replace(b'\t', b' ' * actions.change_tabs)
                         fixed.change_tabs += 1
                     elif mixed_leading_whitespace is not True:
-                        ispace = ispace.replace(b'\t', b' ' * actions.change_tabs)
-                        fixed.change_tabs += 1
+                        if actions.change_tabs >= 0:
+                            ispace = ispace.replace(b'\t', b' ' * actions.change_tabs)
+                            fixed.change_tabs += 1
+                        else:
+                            yield (0, ii+1, empty, "WARNING: found tabs at beginning of line")
+
             # OR Convert spaces to tabs
             elif actions.change_spaces is not None:
                 if b' ' in ispace:
@@ -218,8 +226,11 @@ class FileProcessor(object):
                         ispace = ispace.replace(b' ' * actions.change_spaces, b'\t')
                         fixed.change_spaces += 1
                     elif mixed_leading_whitespace is not True:
-                        ispace = ispace.replace(b' ' * actions.change_spaces, b'\t')
-                        fixed.change_spaces += 1
+                        if actions.change_spaces >= 0:
+                            ispace = ispace.replace(b' ' * actions.change_spaces, b'\t')
+                            fixed.change_spaces += 1
+                        else:
+                            yield (0, ii+1, empty, "WARNING: found spaces at beginning of line")
 
             # Fix trailing space
             if actions.trail_space:
@@ -228,6 +239,8 @@ class FileProcessor(object):
                     if actions.trail_space=='fix':
                         fixed.trail_space += 1
                         trail = b''
+                    else:
+                        yield (0, ii+1, empty, "WARNING: found trailing spaces on line")
 
             # Line endings (missing, matching, and coercing)
             if not eol:
@@ -335,9 +348,15 @@ for inf in args.inf:
             if actions.tab_space_mix:
                 print("\t%s %d lines with mixed tabs/spaces" % ('CHANGED' if actions.tab_space_mix=='fix' else 'WARNED ABOUT' if actions.tab_space_mix=='report' else 'SAW', seen.tab_space_mix), file=stderr)
             if actions.change_tabs is not None:
-                print("\tCHANGED tabs to %d spaces on %d lines" % (actions.change_tabs, fixed.change_tabs if fixed.change_tabs > 0 else seen.change_tabs), file=stderr)
+                if actions.change_tabs >= 0:
+                    print("\tCHANGED tabs to %d spaces on %d lines" % (actions.change_tabs, fixed.change_tabs if fixed.change_tabs > 0 else seen.change_tabs), file=stderr)
+                else:
+                    print("\tWARNED about tabs on %d lines" % (seen.change_tabs-seen.tab_space_mix), file=stderr)
             if actions.change_spaces is not None:
-                print("\tCHANGED %d spaces to tabs on %d lines" % (actions.change_spaces, fixed.change_spaces if fixed.change_spaces > 0 else seen.change_spaces), file=stderr)
+                if actions.change_spaces >= 0:
+                    print("\tCHANGED %d spaces to tabs on %d lines" % (actions.change_spaces, fixed.change_spaces if fixed.change_spaces > 0 else seen.change_spaces), file=stderr)
+                else:
+                    print("\tWARNED about spaces on %d lines" % (seen.change_spaces-seen.tab_space_mix), file=stderr)
 
     inf.close()
     if args.inplace is not None:
