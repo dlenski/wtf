@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-from __future__ import print_function
 import argparse
-from sys import stdin, stdout, stderr, exit, version_info
+from sys import stdin, stdout, stderr, exit
 import re
 import os
 import shutil
+from contextlib import redirect_stdout
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 # Quacks like a dict and an object
@@ -67,9 +68,8 @@ eol_val2name = {b'\r\n':'crlf', b'\n':'lf', b'\r':'cr', None:'unknown'}
 nullout = open(os.devnull, 'wb')
 
 # need binary streams in Python3
-if version_info >= (3,0):
-    stdin = stdin.buffer
-    stdout = stdout.buffer
+stdin = stdin.buffer
+stdout = stdout.buffer
 
 # make stdin and stdout not do any EOL translations on Windows
 if os.name=='nt':
@@ -254,7 +254,7 @@ class FileProcessor(object):
             # Put the line back together
             outline = ispace+body+trail+eol
             if outline!=line:
-                yield (3, ii+1, empty, "changing %s to %s" % (repr(line), repr(outline)))
+                yield (3, ii + 1, empty, f"changing {line!r} to {outline!r}")
 
             # empty line, could be at end of file
             if empty:
@@ -294,20 +294,21 @@ all_fixed = 0
 for inf in args.inf:
     # use a temporary file for output if doing "in-place" editing
     if args.inplace is not None:
-        fname = inf.name
-        name,ext = os.path.splitext(os.path.basename(fname))
+        fname = Path(inf.name)
+        name, ext = fname.stem, fname.suffix
         try:
             # The best approach is to defer the decision about whether to keep or delete the output
             # file until *after* all processing has completed separately.
-            outf = NamedTemporaryFile(dir=os.path.dirname(fname), prefix=name+'_tmp_', suffix=ext, delete=False)
+            outf = NamedTemporaryFile(dir=fname.parent, prefix=name + '_tmp_', suffix=ext, delete=False)
         except OSError as e:
-            p.error("couldn't make temp file for in-place editing: %s" % str(e))
+            p.error(f"couldn't make temp file for in-place editing: {e}")
     else:
+        fname = Path(inf.name)
         outf = args.outf
         if inf is stdin and outf not in (stdout, nullout):
-            fname = outf.name
+            fname = Path(outf.name)
         else:
-            fname = inf.name
+            fname = Path(inf.name)
 
     # Process one file
     fp = FileProcessor(inf, outf, actions)
@@ -322,22 +323,23 @@ for inf in args.inf:
     all_fixed += sum( fixed[k] for k in actions )
     if args.verbose>=1:
         if problems_seen>0 or args.verbose>=2:
-            print("%s:" % fname, file=stderr)
-            if actions.trail_space:
-                print("\t%s %d lines with trailing space" % ('CHOPPED' if actions.trail_space=='fix' else 'SAW', seen.trail_space), file=stderr)
-            if actions.eof_blanks:
-                print("\t%s %d blank lines at EOF" % ('CHOPPED' if actions.eof_blanks=='fix' else 'SAW', seen.eof_blanks), file=stderr)
-            if actions.eof_newl:
-                print("\t%s newline at EOF" % ('ADDED' if actions.eof_newl=='fix' and fixed.eof_newl else 'SAW MISSING' if seen.eof_newl else 'no change to'), file=stderr)
-            if actions.coerce_eol:
-                print("\t%s %d line endings which didn't match %s%s" % ('CHANGED' if actions.coerce_eol[0]=='fix' else 'SAW', seen.coerce_eol,
-                    eol_val2name[fp.eol_value], ' from first line' if actions.coerce_eol[1]=='first' else ''), file=stderr)
-            if actions.tab_space_mix:
-                print("\t%s %d lines with mixed tabs/spaces" % ('CHANGED' if actions.tab_space_mix=='fix' else 'WARNED ABOUT' if actions.tab_space_mix=='report' else 'SAW', seen.tab_space_mix), file=stderr)
-            if actions.change_tabs is not None:
-                print("\tCHANGED tabs to %d spaces on %d lines" % (actions.change_tabs, fixed.change_tabs if fixed.change_tabs > 0 else seen.change_tabs), file=stderr)
-            if actions.change_spaces is not None:
-                print("\tCHANGED %d spaces to tabs on %d lines" % (actions.change_spaces, fixed.change_spaces if fixed.change_spaces > 0 else seen.change_spaces), file=stderr)
+            with redirect_stdout(stderr):
+                print("%s:" % fname)
+                if actions.trail_space:
+                    print("\t%s %d lines with trailing space" % ('CHOPPED' if actions.trail_space == 'fix' else 'SAW', seen.trail_space))
+                if actions.eof_blanks:
+                    print("\t%s %d blank lines at EOF" % ('CHOPPED' if actions.eof_blanks == 'fix' else 'SAW', seen.eof_blanks))
+                if actions.eof_newl:
+                    print("\t%s newline at EOF" % ('ADDED' if actions.eof_newl == 'fix' and fixed.eof_newl else 'SAW MISSING' if seen.eof_newl else 'no change to'))
+                if actions.coerce_eol:
+                    print("\t%s %d line endings which didn't match %s%s" % ('CHANGED' if actions.coerce_eol[0] == 'fix' else 'SAW', seen.coerce_eol,
+                                                                            eol_val2name[fp.eol_value], ' from first line' if actions.coerce_eol[1] == 'first' else ''))
+                if actions.tab_space_mix:
+                    print("\t%s %d lines with mixed tabs/spaces" % ('CHANGED' if actions.tab_space_mix == 'fix' else 'WARNED ABOUT' if actions.tab_space_mix == 'report' else 'SAW', seen.tab_space_mix))
+                if actions.change_tabs is not None:
+                    print("\tCHANGED tabs to %d spaces on %d lines" % (actions.change_tabs, fixed.change_tabs if fixed.change_tabs > 0 else seen.change_tabs))
+                if actions.change_spaces is not None:
+                    print("\tCHANGED %d spaces to tabs on %d lines" % (actions.change_spaces, fixed.change_spaces if fixed.change_spaces > 0 else seen.change_spaces))
 
     inf.close()
     if args.inplace is not None:
